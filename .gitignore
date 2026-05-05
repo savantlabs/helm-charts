@@ -1,0 +1,18 @@
+# Helm
+*.tgz
+charts/*/charts/
+charts/*/Chart.lock
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# AI assistant — personal/local settings only
+# (shared guidance files like CLAUDE.md / AGENTS.md can be committed intentionally)
+CLAUDE.local.md
+.claude/
+.codex/
+.cursor/
+.aider*

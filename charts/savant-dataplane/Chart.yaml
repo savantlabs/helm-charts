@@ -1,0 +1,12 @@
+apiVersion: v2
+name: savant-dataplane
+description: Savant dataplane for self-managed Kubernetes deployments
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://savantlabs.io
+sources:
+  - https://github.com/savantlabs/helm-charts
+maintainers:
+  - name: Savant Labs
+    url: https://savantlabs.io

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: savant-config
+data:
+  SAVANT_AGENT_ID: {{ .Values.savantConfig.agentId | quote }}
+  SAVANT_AGENT_BUCKET: {{ .Values.savantConfig.bucketName | quote }}
