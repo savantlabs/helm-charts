@@ -1,3 +1,48 @@
 savantConfig:
   agentId: ""
   bucketName: ""
+
+# ZooKeeper (Bitnami subchart) — cluster-internal coordination service.
+# Customers normally should not touch this block. The escape hatches are exposed
+# for advanced operators who need to tune resources, storage, or placement.
+zookeeper:
+  enabled: true
+  # Bitnami moved free community images to `bitnamilegacy/*` in Aug 2025; the
+  # `bitnami/*` namespace now requires a paid subscription. These two settings
+  # keep the chart on the free legacy image.
+  global:
+    security:
+      allowInsecureImages: true
+  image:
+    repository: bitnamilegacy/zookeeper
+    tag: 3.9.3
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 16Gi
+    # storageClass unset: uses the cluster's default StorageClass. Override via
+    # `global.storageClass` (applies to all subcharts) or `zookeeper.persistence.storageClass`.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+      ephemeral-storage: 1Gi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+      ephemeral-storage: 2Gi
+  nodeSelector:
+    pool.savant.io/type: service
+  podAntiAffinityPreset: hard
+  pdb:
+    create: true
+    minAvailable: 2
+  autopurge:
+    snapRetainCount: 3
+  auth:
+    enabled: false
+  tls:
+    client:
+      enabled: false
+    quorum:
+      enabled: false

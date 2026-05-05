@@ -1,0 +1,8 @@
+# Overrides applied by chart-testing against a single-node kind cluster in CI.
+# Real installs use charts/savant-dataplane/values.yaml.
+zookeeper:
+  replicaCount: 1
+  pdb:
+    create: false
+  persistence:
+    enabled: false
