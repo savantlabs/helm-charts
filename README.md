@@ -17,3 +17,9 @@ helm install savant-dataplane savant/savant-dataplane -n savant --create-namespa
 ```
 
 See the chart's own README for the full install guide and values reference.
+
+## Support
+
+These charts are published for Savant customers. For product and deployment support, contact your Savant account team.
+
+Security reports: see [`SECURITY.md`](SECURITY.md).

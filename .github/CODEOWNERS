@@ -1,0 +1,10 @@
+# Default owners for everything in this repo.
+# See https://docs.github.com/articles/about-code-owners
+
+*                           @savantlabs/helm-charts
+
+# Chart sources
+/charts/                    @savantlabs/helm-charts
+
+# CI and release automation
+/.github/workflows/         @savantlabs/helm-charts
