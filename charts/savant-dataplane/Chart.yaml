@@ -10,3 +10,9 @@ sources:
 maintainers:
   - name: Savant Labs
     url: https://savantlabs.io
+
+dependencies:
+  - name: zookeeper
+    version: 13.8.7
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: zookeeper.enabled
