@@ -8,8 +8,8 @@ home: https://savantlabs.io
 sources:
   - https://github.com/savantlabs/helm-charts
 maintainers:
-  - name: Savant Labs
-    url: https://savantlabs.io
+  - name: savantlabs
+    url: https://github.com/savantlabs
 
 dependencies:
   - name: zookeeper
