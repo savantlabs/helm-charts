@@ -85,9 +85,3 @@ spark-operator:
   spark:
     jobNamespaces:
       - ""
-    # All Spark driver/executor pods run under the shared savant-agent SA,
-    # which holds the IRSA/WIF bindings. Do not let the subchart create
-    # its own SA.
-    serviceAccount:
-      create: false
-      name: savant-agent
