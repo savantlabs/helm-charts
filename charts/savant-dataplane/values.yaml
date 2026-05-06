@@ -46,3 +46,29 @@ zookeeper:
       enabled: false
     quorum:
       enabled: false
+
+# Spark Operator (Kubeflow subchart) — reconciles SparkApplication CRs submitted
+# by the Savant runtime. `spark.jobNamespaces: [""]` means the operator watches
+# all namespaces; scope it to specific namespaces if your org requires.
+spark-operator:
+  enabled: true
+  controller:
+    replicas: 2
+    nodeSelector:
+      pool.savant.io/type: service
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 1200m
+        memory: 2Gi
+  webhook:
+    # chart key is `enable`, not `enabled`
+    enable: false
+    # kept so that turning the webhook on doesn't need a second values change
+    nodeSelector:
+      pool.savant.io/type: service
+  spark:
+    jobNamespaces:
+      - ""

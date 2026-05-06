@@ -6,3 +6,7 @@ zookeeper:
     create: false
   persistence:
     enabled: false
+
+spark-operator:
+  controller:
+    replicas: 1
