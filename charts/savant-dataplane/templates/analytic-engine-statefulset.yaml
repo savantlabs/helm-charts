@@ -21,6 +21,12 @@ spec:
       labels:
         {{- include "savant-dataplane.labels" . | nindent 8 }}
         app.kubernetes.io/component: analytic-engine
+      annotations:
+        # Single-replica Spark driver; losing the pod restarts all in-flight
+        # analyses. Pin the pod to its node so voluntary disruption (autoscaler
+        # scale-down, Karpenter consolidation) can't evict it.
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+        karpenter.sh/do-not-disrupt: "true"
     spec:
       serviceAccountName: savant-agent
       {{- with .Values.analyticEngine.nodeSelector }}

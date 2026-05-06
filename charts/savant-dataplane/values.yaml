@@ -53,7 +53,7 @@ zookeeper:
     # `global.storageClass` (applies to all subcharts) or `zookeeper.persistence.storageClass`.
   resources:
     requests:
-      cpu: 250m
+      cpu: 500m
       memory: 1Gi
       ephemeral-storage: 1Gi
     limits:
@@ -143,8 +143,10 @@ spark:
     service:
       type: ClusterIP
       headless: true
-    podDisruptionBudget:
-      enabled: true
+    # Keep quorum: tolerate at most one voluntary disruption of the 3-replica HA
+    # master. Upstream key is `pdb`, not `podDisruptionBudget`.
+    pdb:
+      create: true
       minAvailable: 2
     extraEnvVars:
       - name: SPARK_RECOVERY_MODE
@@ -185,6 +187,11 @@ spark:
                     operator: In
                     values: ["worker"]
               topologyKey: topology.kubernetes.io/zone
+    # Workers are stateless and Spark retries failed stages; prefer cluster
+    # elasticity (Spot reclaim, autoscaler consolidation) over a tight PDB.
+    pdb:
+      create: true
+      maxUnavailable: 50%
     # Our vendored Bitnami fork gates its default single-master SPARK_MASTER_URL
     # behind this flag so we can set the full 3-master quorum URL below without
     # producing duplicate env keys. See charts/spark/SAVANT_PATCHES.md.
@@ -230,7 +237,7 @@ tei:
       cpu: 3
       memory: 12Gi
     limits:
-      cpu: 3
+      cpu: 4
       memory: 12Gi
   nodeSelector:
     pool.savant.io/type: runtime
@@ -253,10 +260,10 @@ agent:
   replicaCount: 1
   resources:
     requests:
-      cpu: 1200m
+      cpu: 1500m
       memory: 6Gi
     limits:
-      cpu: 1600m
+      cpu: 1700m
       memory: 6Gi
   nodeSelector:
     pool.savant.io/type: service
@@ -274,12 +281,13 @@ analyticEngine:
   replicaCount: 1
   resources:
     requests:
-      cpu: 3000m
+      cpu: 6
       memory: 28Gi
-      ephemeral-storage: 1Gi
+      ephemeral-storage: 32Gi
     limits:
-      cpu: 3500m
+      cpu: 7
       memory: 28Gi
+      ephemeral-storage: 32Gi
   nodeSelector:
     pool.savant.io/type: runtime
   service:
