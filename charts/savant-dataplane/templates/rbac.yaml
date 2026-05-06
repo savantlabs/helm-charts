@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: savant-agent-admin
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: savant-agent
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
