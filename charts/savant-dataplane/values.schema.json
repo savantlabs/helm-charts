@@ -32,7 +32,8 @@
           "type": "object",
           "properties": {
             "credentialConfig": { "type": "string" },
-            "existingCredentialConfigMap": { "type": "string" }
+            "existingCredentialConfigMap": { "type": "string" },
+            "gcpProject": { "type": "string", "minLength": 1 }
           },
           "additionalProperties": false
         },
@@ -131,6 +132,7 @@
         },
         "resources":    { "type": "object" },
         "nodeSelector": { "type": ["object", "null"] },
+        "springProfiles": { "type": "string" },
         "service": {
           "type": "object",
           "properties": {

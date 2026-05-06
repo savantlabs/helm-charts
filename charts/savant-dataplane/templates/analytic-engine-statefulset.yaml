@@ -75,11 +75,13 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod,vpc-prod"
+              value: {{ .Values.analyticEngine.springProfiles | quote }}
             - name: LOG_FORMAT
               value: "eks"
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /var/run/gcp/credential-config.json
+            - name: GOOGLE_CLOUD_PROJECT
+              value: {{ .Values.savantConfig.controlPlane.gcpProject | quote }}
             - name: RUNTIME_VPC_CLOUD_PROVIDER
               value: {{ .Values.savantConfig.cloudProvider | quote }}
             - name: RUNTIME_VPC_STAGING_PREFIX
