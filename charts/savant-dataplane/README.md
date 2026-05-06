@@ -23,8 +23,8 @@ You will need:
 
 - **Kubernetes 1.27+** on Amazon EKS with an OIDC provider (required for IRSA).
 - **Three node groups**, each labeled with `pool.savant.io/type`:
-  - `service` — long-running services (agent, TEI, operator, ZK, Spark master). 2 vCPU / 8 GiB baseline.
-  - `runtime` — memory-bound workloads (analytic-engine). 4 vCPU / 32 GiB family.
+  - `service` — long-running services (agent, operator, ZooKeeper, Spark master). 4 vCPU / 16 GiB, **minimum 3 nodes** (ZooKeeper and Spark master each run 3 replicas with hard per-host anti-affinity; spread across 3 AZs for quorum resilience).
+  - `runtime` — memory-bound workloads (analytic-engine, TEI). 8 vCPU / 32 GiB family.
   - `spark` — Spark compute workers. 16 vCPU / 64 GiB family, typically Spot.
 - **Cluster autoscaler** (or Karpenter) installed. Savant workloads are sized to drive node-level scale-out.
 - **EBS CSI driver** installed so PVCs (ZK, TEI cache) can bind.

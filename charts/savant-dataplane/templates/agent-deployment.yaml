@@ -20,6 +20,12 @@ spec:
       labels:
         {{- include "savant-dataplane.labels" . | nindent 8 }}
         app.kubernetes.io/component: agent
+      annotations:
+        # Single-replica, not yet HA. Pin the pod so voluntary disruption
+        # (autoscaler scale-down, Karpenter consolidation) can't evict it.
+        # Remove these once the agent supports running multiple replicas.
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+        karpenter.sh/do-not-disrupt: "true"
     spec:
       serviceAccountName: savant-agent
       {{- with .Values.agent.nodeSelector }}
