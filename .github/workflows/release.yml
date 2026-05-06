@@ -25,7 +25,7 @@ jobs:
         uses: azure/setup-helm@v5
 
       - name: Release changed charts (GitHub Pages)
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@v1.7.0
         with:
           charts_dir: charts
           skip_existing: true
