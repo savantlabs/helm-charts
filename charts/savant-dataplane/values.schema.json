@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "savant-dataplane values",
+  "type": "object",
+  "required": ["savantConfig"],
+  "properties": {
+    "savantConfig": {
+      "type": "object",
+      "required": ["agentId", "cloudProvider", "aws", "controlPlane"],
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Savant agent ID provided by Savant during onboarding."
+        },
+        "cloudProvider": {
+          "type": "string",
+          "enum": ["aws", "gcp", "azure"],
+          "description": "Customer cloud provider. Only 'aws' is supported today."
+        },
+        "aws": {
+          "type": "object",
+          "properties": {
+            "region": { "type": "string" },
+            "roleArn": { "type": "string" },
+            "bucketName": { "type": "string" },
+            "externalId": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "controlPlane": {
+          "type": "object",
+          "properties": {
+            "credentialConfig": { "type": "string" },
+            "existingCredentialConfigMap": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "telemetry": {
+          "type": "object",
+          "properties": {
+            "otlpEndpoint": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "cloudProvider": { "const": "aws" } }
+          },
+          "then": {
+            "properties": {
+              "aws": {
+                "required": ["region", "roleArn", "bucketName"],
+                "properties": {
+                  "region":     { "minLength": 1 },
+                  "roleArn":    { "minLength": 1, "pattern": "^arn:aws:iam::[0-9]{12}:role/.+" },
+                  "bucketName": { "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "controlPlane": {
+                  "properties": { "credentialConfig": { "type": "string", "minLength": 1 } },
+                  "required": ["credentialConfig"]
+                }
+              }
+            },
+            {
+              "properties": {
+                "controlPlane": {
+                  "properties": { "existingCredentialConfigMap": { "type": "string", "minLength": 1 } },
+                  "required": ["existingCredentialConfigMap"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "agent":           { "$ref": "#/$defs/component" },
+    "analyticEngine":  { "$ref": "#/$defs/component" },
+    "tei": {
+      "allOf": [
+        { "$ref": "#/$defs/component" },
+        {
+          "properties": {
+            "model": { "type": "string" },
+            "persistence": {
+              "type": "object",
+              "properties": {
+                "enabled":      { "type": "boolean" },
+                "size":         { "type": "string" },
+                "storageClass": { "type": "string" }
+              }
+            },
+            "service": {
+              "type": "object",
+              "properties": {
+                "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "zookeeper":      { "type": "object" },
+    "spark":          { "type": "object" },
+    "spark-operator": { "type": "object" },
+    "global":         { "type": "object" }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "properties": {
+        "enabled":      { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 0 },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag":        { "type": "string" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          }
+        },
+        "resources":    { "type": "object" },
+        "nodeSelector": { "type": ["object", "null"] },
+        "service": {
+          "type": "object",
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        }
+      }
+    }
+  }
+}
