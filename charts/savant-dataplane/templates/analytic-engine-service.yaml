@@ -1,21 +1,21 @@
-{{- if .Values.agent.enabled }}
+{{- if .Values.analyticEngine.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: agent
+  name: analytic-engine
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "savant-dataplane.labels" . | nindent 4 }}
-    app.kubernetes.io/component: agent
+    app.kubernetes.io/component: analytic-engine
 spec:
-  type: ClusterIP
+  clusterIP: None
   selector:
     app.kubernetes.io/name: savant-dataplane
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: agent
+    app.kubernetes.io/component: analytic-engine
   ports:
-    - name: http
+    - name: http-spark
       protocol: TCP
-      port: {{ .Values.agent.service.port }}
-      targetPort: http
+      port: {{ .Values.analyticEngine.service.port }}
+      targetPort: http-spark
 {{- end }}

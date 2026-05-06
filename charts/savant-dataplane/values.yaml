@@ -11,6 +11,9 @@ savantConfig:
     roleArn: ""
     # S3 bucket used for agent staging/artifact storage.
     bucketName: ""
+    # Customer-generated STS External ID for the Savant support role trust
+    # chain. Leave empty to skip rendering the savant-secrets Secret.
+    externalId: ""
   controlPlane:
     # WIF credential-config JSON (non-sensitive) for Savant's control-plane
     # backend. Provided by Savant in savant-onboarding.yaml. Mutually exclusive
@@ -30,6 +33,9 @@ savantConfig:
 # for advanced operators who need to tune resources, storage, or placement.
 zookeeper:
   enabled: true
+  # Fixed resource name (no release-name prefix), so consumers can reference
+  # ZooKeeper by the deterministic DNS name `zookeeper.<namespace>`.
+  fullnameOverride: zookeeper
   # Bitnami moved free community images to `bitnamilegacy/*` in Aug 2025; the
   # `bitnami/*` namespace now requires a paid subscription. These two settings
   # keep the chart on the free legacy image.
@@ -100,6 +106,9 @@ spark-operator:
 # post-install hook) with ZooKeeper recovery, autoscaling workers.
 spark:
   enabled: true
+  # Fixed resource name so consumers reach masters via
+  # `spark-master-N.spark-headless` DNS (matches Savant runtime expectations).
+  fullnameOverride: spark
   global:
     security:
       # Required because we pull Spark from a non-Bitnami registry.
@@ -143,8 +152,8 @@ spark:
       - name: SPARK_DAEMON_JAVA_OPTS
         value: >-
           -Dspark.deploy.recoveryMode=ZOOKEEPER
-          -Dspark.deploy.zookeeper.url={{ .Release.Name }}-zookeeper.{{ .Release.Namespace }}:2181
-          -Dspark.deploy.zookeeper.dir=/spark-ha/{{ .Release.Namespace }}/{{ .Release.Name }}
+          -Dspark.deploy.zookeeper.url=zookeeper.{{ .Release.Namespace }}:2181
+          -Dspark.deploy.zookeeper.dir=/spark-ha/{{ .Release.Namespace }}/savant
       - name: SPARK_WORKER_TIMEOUT
         value: "60"
       - name: SPARK_DEAD_WORKER_PERSISTENCE
@@ -182,8 +191,7 @@ spark:
     skipDefaultMasterUrl: true
     extraEnvVars:
       - name: SPARK_MASTER_URL
-        value: >-
-          spark://{{ .Release.Name }}-spark-master-0.{{ .Release.Name }}-spark-headless:7077,{{ .Release.Name }}-spark-master-1.{{ .Release.Name }}-spark-headless:7077,{{ .Release.Name }}-spark-master-2.{{ .Release.Name }}-spark-headless:7077
+        value: "spark://spark-master-0.spark-headless:7077,spark-master-1.spark-headless:7077,spark-master-2.spark-headless:7077"
       - name: SPARK_WORKER_CORES
         value: "15"
       - name: SPARK_WORKER_MEMORY
@@ -252,5 +260,27 @@ agent:
       memory: 6Gi
   nodeSelector:
     pool.savant.io/type: service
+  service:
+    port: 8080
+
+# Savant Analytic Engine — Spark driver that submits workloads to the standalone
+# Spark cluster and handles runtime execution for Savant analyses.
+analyticEngine:
+  enabled: true
+  image:
+    repository: us-docker.pkg.dev/savant-prod/gcr.io/spark-runtime
+    tag: v1.0.0
+    pullPolicy: Always
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 3000m
+      memory: 28Gi
+      ephemeral-storage: 1Gi
+    limits:
+      cpu: 3500m
+      memory: 28Gi
+  nodeSelector:
+    pool.savant.io/type: runtime
   service:
     port: 8080

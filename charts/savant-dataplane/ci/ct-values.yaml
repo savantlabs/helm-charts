@@ -43,6 +43,10 @@ tei:
 agent:
   enabled: false
 
+# Analytic engine needs the full Spark cluster up; skip in kind.
+analyticEngine:
+  enabled: false
+
 # _validate.yaml requires cloudProvider=aws; satisfy it with a dummy value
 # so template rendering succeeds without setting real cloud credentials.
 savantConfig:
