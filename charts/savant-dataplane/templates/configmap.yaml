@@ -12,5 +12,4 @@ data:
   {{- if eq .Values.savantConfig.cloudProvider "aws" }}
   SAVANT_AGENT_BUCKET: {{ .Values.savantConfig.aws.bucketName | quote }}
   AWS_DEFAULT_REGION: {{ .Values.savantConfig.aws.region | quote }}
-  AWS_ROLE_ARN: {{ .Values.savantConfig.aws.roleArn | quote }}
   {{- end }}

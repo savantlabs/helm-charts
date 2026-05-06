@@ -33,7 +33,8 @@
           "properties": {
             "credentialConfig": { "type": "string" },
             "existingCredentialConfigMap": { "type": "string" },
-            "gcpProject": { "type": "string", "minLength": 1 }
+            "gcpProject": { "type": "string", "minLength": 1 },
+            "wifAudience": { "type": "string" }
           },
           "additionalProperties": false
         },
