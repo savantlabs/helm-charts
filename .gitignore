@@ -1,6 +1,7 @@
 # Helm
-*.tgz
-charts/*/charts/
+# Ignore build artifacts from `helm dep update` (packaged subcharts), but not
+# vendored subchart source — those are checked in intentionally.
+charts/*/charts/*.tgz
 charts/*/Chart.lock
 
 # Editor
