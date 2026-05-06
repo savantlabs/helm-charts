@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-tei
+  name: tei
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "savant-dataplane.labels" . | nindent 4 }}

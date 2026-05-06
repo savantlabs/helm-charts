@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-tei
+  name: tei
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "savant-dataplane.labels" . | nindent 4 }}
@@ -61,7 +61,7 @@ spec:
         - name: model-cache
           {{- if .Values.tei.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-tei-cache
+            claimName: tei-cache
           {{- else }}
           emptyDir: {}
           {{- end }}
