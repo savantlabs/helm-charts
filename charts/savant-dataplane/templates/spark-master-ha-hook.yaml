@@ -1,0 +1,36 @@
+{{- if .Values._internal.postInstallHooks.sparkMasterHaScale.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-spark-master-ha-scale
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "savant-dataplane.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: savant-agent
+      restartPolicy: Never
+      nodeSelector:
+        pool.savant.io/type: service
+      containers:
+        - name: kubectl
+          image: rancher/kubectl:v1.30.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              kubectl -n "{{ .Release.Namespace }}" scale statefulset \
+                "{{ .Release.Name }}-spark-master" --replicas=3
+              kubectl -n "{{ .Release.Namespace }}" rollout status statefulset \
+                "{{ .Release.Name }}-spark-master" --timeout=300s
+{{- end }}

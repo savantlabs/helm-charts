@@ -10,3 +10,23 @@ zookeeper:
 spark-operator:
   controller:
     replicas: 1
+
+# Kind can't satisfy the real Spark resource defaults; shrink everything,
+# and disable the master HA hook (single-node clusters can't schedule 3 masters).
+spark:
+  master:
+    resources: {}
+    podDisruptionBudget:
+      enabled: false
+    affinity: {}
+  worker:
+    replicaCount: 1
+    resources: {}
+    affinity: {}
+    extraVolumes: []
+    extraVolumeMounts: []
+
+_internal:
+  postInstallHooks:
+    sparkMasterHaScale:
+      enabled: false

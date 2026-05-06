@@ -85,3 +85,115 @@ spark-operator:
   spark:
     jobNamespaces:
       - ""
+
+# Spark standalone cluster (Bitnami subchart) — HA master (3 replicas via
+# post-install hook) with ZooKeeper recovery, autoscaling workers.
+spark:
+  enabled: true
+  global:
+    security:
+      # Required because we pull Spark from a non-Bitnami registry.
+      allowInsecureImages: true
+  image:
+    registry: us-docker.pkg.dev
+    repository: savant-prod/gcr.io/bitnami-spark
+    tag: v3.5.6_2.13
+    pullPolicy: IfNotPresent
+  master:
+    # The Bitnami chart hardcodes the master StatefulSet to replicas: 1. Our
+    # post-install hook (templates/spark-master-ha-hook.yaml) scales it to 3.
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 1400m
+        memory: 4Gi
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["master"]
+            topologyKey: kubernetes.io/hostname
+    nodeSelector:
+      pool.savant.io/type: service
+    service:
+      type: ClusterIP
+      headless: true
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 2
+    extraEnvVars:
+      - name: SPARK_RECOVERY_MODE
+        value: "ZOOKEEPER"
+      - name: SPARK_DAEMON_JAVA_OPTS
+        value: >-
+          -Dspark.deploy.recoveryMode=ZOOKEEPER
+          -Dspark.deploy.zookeeper.url={{ .Release.Name }}-zookeeper.{{ .Release.Namespace }}:2181
+          -Dspark.deploy.zookeeper.dir=/spark-ha/{{ .Release.Namespace }}/{{ .Release.Name }}
+      - name: SPARK_WORKER_TIMEOUT
+        value: "60"
+      - name: SPARK_DEAD_WORKER_PERSISTENCE
+        value: "120"
+  worker:
+    # Static replica count. HPA is not a good fit for Spark workers (CPU/memory
+    # metrics don't reflect queue depth). Capacity scales at the node level via
+    # the cluster autoscaler as pending executor pods trigger node additions.
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "15"
+        memory: 56Gi
+        ephemeral-storage: 200Gi
+      limits:
+        cpu: 15500m
+        memory: 56Gi
+        ephemeral-storage: 200Gi
+    nodeSelector:
+      pool.savant.io/type: spark
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values: ["worker"]
+              topologyKey: topology.kubernetes.io/zone
+    extraEnvVars:
+      - name: SPARK_MASTER_URL
+        value: >-
+          spark://{{ .Release.Name }}-spark-master-0.{{ .Release.Name }}-spark-headless:7077,{{ .Release.Name }}-spark-master-1.{{ .Release.Name }}-spark-headless:7077,{{ .Release.Name }}-spark-master-2.{{ .Release.Name }}-spark-headless:7077
+      - name: SPARK_WORKER_CORES
+        value: "15"
+      - name: SPARK_WORKER_MEMORY
+        value: "55g"
+      - name: SPARK_WORKER_TIMEOUT
+        value: "60"
+      - name: SPARK_LOCAL_DIRS
+        value: "/opt/bitnami/spark/data"
+      - name: SPARK_WORKER_CLEANUP_ENABLED
+        value: "true"
+      - name: SPARK_WORKER_CLEANUP_INTERVAL
+        value: "1800"
+      - name: SPARK_WORKER_CLEANUP_APPDATA_TTL
+        value: "604800"
+    extraVolumes:
+      - name: spark-worker-data
+        emptyDir:
+          sizeLimit: 200Gi
+    extraVolumeMounts:
+      - name: spark-worker-data
+        mountPath: /opt/bitnami/spark/data
+
+# Internal knobs. Not part of the public values contract. Subject to change
+# without a chart version bump. Override only if directed by Savant support.
+_internal:
+  postInstallHooks:
+    sparkMasterHaScale:
+      enabled: true
