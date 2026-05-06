@@ -143,7 +143,7 @@ spark:
     # Static replica count. HPA is not a good fit for Spark workers (CPU/memory
     # metrics don't reflect queue depth). Capacity scales at the node level via
     # the cluster autoscaler as pending executor pods trigger node additions.
-    replicaCount: 2
+    replicaCount: 4
     resources:
       requests:
         cpu: "15"
