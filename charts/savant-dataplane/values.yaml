@@ -1,6 +1,19 @@
 savantConfig:
   agentId: ""
   bucketName: ""
+  aws:
+    # AWS region for SDK clients (sets AWS_REGION on Savant pods).
+    region: ""
+    # IRSA role ARN. The role's trust policy must list the subject
+    # system:serviceaccount:<release-namespace>:savant-agent.
+    roleArn: ""
+  gcp:
+    # WIF credential-config JSON (non-sensitive). Provided by Savant in
+    # savant-onboarding.yaml. Mutually exclusive with existingCredentialConfigMap.
+    credentialConfig: ""
+    # Alternatively, reference a customer-managed ConfigMap that contains
+    # credential-config.json under the same key.
+    existingCredentialConfigMap: ""
 
 # ZooKeeper (Bitnami subchart) — cluster-internal coordination service.
 # Customers normally should not touch this block. The escape hatches are exposed
