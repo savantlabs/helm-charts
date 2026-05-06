@@ -47,7 +47,14 @@ agent:
 analyticEngine:
   enabled: false
 
-# _validate.yaml requires cloudProvider=aws; satisfy it with a dummy value
-# so template rendering succeeds without setting real cloud credentials.
+# Dummy values to satisfy values.schema.json (agentId, aws fields, and one of
+# the controlPlane credential-config options are required).
 savantConfig:
+  agentId: ci-test
   cloudProvider: aws
+  aws:
+    region: us-west-2
+    roleArn: arn:aws:iam::000000000000:role/ci-fake
+    bucketName: ci-fake-bucket
+  controlPlane:
+    existingCredentialConfigMap: ci-fake
