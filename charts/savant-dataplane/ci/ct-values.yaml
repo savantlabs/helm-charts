@@ -16,16 +16,20 @@ spark-operator:
 spark:
   master:
     replicaCount: 1
-    resources: {}
+    # Helm deep-merges maps, so {} won't override parent requests/limits.
+    # null drops the block; resourcesPreset "none" skips the fallback preset.
+    resources: null
+    resourcesPreset: "none"
     podDisruptionBudget:
       enabled: false
-    affinity: {}
+    affinity: null
   worker:
     replicaCount: 1
     # kind has a single "service" node; null drops the spark-pool selector so
     # the worker can schedule there.
     nodeSelector: null
-    resources: {}
-    affinity: {}
+    resources: null
+    resourcesPreset: "none"
+    affinity: null
     extraVolumes: []
     extraVolumeMounts: []
