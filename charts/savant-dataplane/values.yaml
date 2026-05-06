@@ -22,6 +22,10 @@ savantConfig:
     # Alternatively, reference a customer-managed ConfigMap that contains
     # credential-config.json under the same key.
     existingCredentialConfigMap: ""
+    # Savant-owned GCP project the credentialConfig federates to. Defaults to
+    # savant-prod; override for non-production stacks (QA, dev). Flows into
+    # agent and analytic-engine as GOOGLE_CLOUD_PROJECT.
+    gcpProject: "savant-prod"
   telemetry:
     # OTLP endpoint for trace/metric export (gRPC). Leave empty to disable.
     # Point Savant pods at your own OpenTelemetry Collector if you want to
@@ -258,6 +262,9 @@ agent:
     tag: v1.0.0
     pullPolicy: Always
   replicaCount: 1
+  # Spring profile passed via SPRING_PROFILES_ACTIVE. Matches the backing
+  # application.yml layout; QA/dev stacks override to `qa`.
+  springProfiles: "prod"
   resources:
     requests:
       cpu: 1500m
@@ -279,6 +286,10 @@ analyticEngine:
     tag: v1.0.0
     pullPolicy: Always
   replicaCount: 1
+  # Spring profile passed via SPRING_PROFILES_ACTIVE. The `vpc-*` suffix tells
+  # the runtime it's executing inside a customer VPC dataplane. QA/dev stacks
+  # override to `qa,vpc-qa`.
+  springProfiles: "prod,vpc-prod"
   resources:
     requests:
       cpu: 6

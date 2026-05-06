@@ -67,11 +67,11 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /var/run/gcp/credential-config.json
             - name: GOOGLE_CLOUD_PROJECT
-              value: "savant-prod"
+              value: {{ .Values.savantConfig.controlPlane.gcpProject | quote }}
             - name: LOG_FORMAT
               value: "eks"
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod"
+              value: {{ .Values.agent.springProfiles | quote }}
             - name: SAVANT_AGENT_STAGING_PREFIX
               value: "/tmp"
             - name: SAVANT_K8S_ISINK8S
