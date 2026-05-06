@@ -1,0 +1,9 @@
+{{/*
+Fail fast on invalid or unsupported values at render time.
+*/}}
+{{- if not (has .Values.savantConfig.cloudProvider (list "aws" "gcp" "azure")) -}}
+{{- fail (printf "savantConfig.cloudProvider must be one of: aws, gcp, azure (got %q)" .Values.savantConfig.cloudProvider) -}}
+{{- end -}}
+{{- if ne .Values.savantConfig.cloudProvider "aws" -}}
+{{- fail (printf "savantConfig.cloudProvider %q is not yet supported; only 'aws' works today" .Values.savantConfig.cloudProvider) -}}
+{{- end -}}

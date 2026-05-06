@@ -2,6 +2,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: savant-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
 data:
   SAVANT_AGENT_ID: {{ .Values.savantConfig.agentId | quote }}
-  SAVANT_AGENT_BUCKET: {{ .Values.savantConfig.bucketName | quote }}
+  SAVANT_AGENT_CLOUD_PROVIDER: {{ .Values.savantConfig.cloudProvider | quote }}
+  SAVANT_STACK: {{ printf "agent-%s" .Values.savantConfig.agentId | quote }}
+  {{- if eq .Values.savantConfig.cloudProvider "aws" }}
+  SAVANT_AGENT_BUCKET: {{ .Values.savantConfig.aws.bucketName | quote }}
+  AWS_DEFAULT_REGION: {{ .Values.savantConfig.aws.region | quote }}
+  AWS_ROLE_ARN: {{ .Values.savantConfig.aws.roleArn | quote }}
+  {{- end }}

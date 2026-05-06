@@ -37,3 +37,13 @@ spark:
 # TEI downloads a ~1.3 GB model on startup; disable in kind to keep install fast.
 tei:
   enabled: false
+
+# Agent image is in a Savant private-ish registry path and requires live
+# Savant-backend WIF credentials; disable in kind.
+agent:
+  enabled: false
+
+# _validate.yaml requires cloudProvider=aws; satisfy it with a dummy value
+# so template rendering succeeds without setting real cloud credentials.
+savantConfig:
+  cloudProvider: aws

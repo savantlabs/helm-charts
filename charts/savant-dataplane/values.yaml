@@ -1,19 +1,29 @@
 savantConfig:
   agentId: ""
-  bucketName: ""
+  # Customer's cloud provider. Only 'aws' is supported today; reserving the
+  # field for future gcp/azure support.
+  cloudProvider: aws
   aws:
     # AWS region for SDK clients (sets AWS_REGION on Savant pods).
     region: ""
     # IRSA role ARN. The role's trust policy must list the subject
     # system:serviceaccount:<release-namespace>:savant-agent.
     roleArn: ""
-  gcp:
-    # WIF credential-config JSON (non-sensitive). Provided by Savant in
-    # savant-onboarding.yaml. Mutually exclusive with existingCredentialConfigMap.
+    # S3 bucket used for agent staging/artifact storage.
+    bucketName: ""
+  controlPlane:
+    # WIF credential-config JSON (non-sensitive) for Savant's control-plane
+    # backend. Provided by Savant in savant-onboarding.yaml. Mutually exclusive
+    # with existingCredentialConfigMap.
     credentialConfig: ""
     # Alternatively, reference a customer-managed ConfigMap that contains
     # credential-config.json under the same key.
     existingCredentialConfigMap: ""
+  telemetry:
+    # OTLP endpoint for trace/metric export (gRPC). Leave empty to disable.
+    # Point Savant pods at your own OpenTelemetry Collector if you want to
+    # capture the signals (e.g., http://otel-collector.observability:4317).
+    otlpEndpoint: ""
 
 # ZooKeeper (Bitnami subchart) — cluster-internal coordination service.
 # Customers normally should not touch this block. The escape hatches are exposed
@@ -223,3 +233,24 @@ tei:
     # `global.storageClass` or `tei.persistence.storageClass`.
   service:
     port: 80
+
+# Savant Agent — the Spring Boot service that orchestrates workflows on behalf
+# of Savant's control plane.
+agent:
+  enabled: true
+  image:
+    repository: us-docker.pkg.dev/savant-prod/gcr.io/agent
+    tag: v1.0.0
+    pullPolicy: Always
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 1200m
+      memory: 6Gi
+    limits:
+      cpu: 1600m
+      memory: 6Gi
+  nodeSelector:
+    pool.savant.io/type: service
+  service:
+    port: 8080
