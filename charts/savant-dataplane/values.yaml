@@ -195,3 +195,31 @@ spark:
     extraVolumeMounts:
       - name: spark-worker-data
         mountPath: /opt/bitnami/spark/data
+
+# TEI — HuggingFace Text Embeddings Inference server. Serves embedding
+# requests for Savant's GenAI features. The model is part of the Savant-backend
+# contract; changing it will break downstream vector search.
+tei:
+  enabled: true
+  image:
+    repository: ghcr.io/huggingface/text-embeddings-inference
+    tag: cpu-1.8
+    pullPolicy: IfNotPresent
+  model: mixedbread-ai/mxbai-embed-large-v1
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 3
+      memory: 12Gi
+    limits:
+      cpu: 3
+      memory: 12Gi
+  nodeSelector:
+    pool.savant.io/type: runtime
+  persistence:
+    enabled: true
+    size: 10Gi
+    # storageClass unset: uses the cluster's default StorageClass. Override via
+    # `global.storageClass` or `tei.persistence.storageClass`.
+  service:
+    port: 80
