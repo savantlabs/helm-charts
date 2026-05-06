@@ -1,0 +1,68 @@
+{{- if .Values.tei.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-tei
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tei
+spec:
+  replicas: {{ .Values.tei.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: savant-dataplane
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: tei
+  # ReadWriteOnce PVC cannot attach to two pods; updates must drain before rolling.
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "savant-dataplane.labels" . | nindent 8 }}
+        app.kubernetes.io/component: tei
+    spec:
+      {{- with .Values.tei.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: tei
+          image: "{{ .Values.tei.image.repository }}:{{ .Values.tei.image.tag }}"
+          imagePullPolicy: {{ .Values.tei.image.pullPolicy }}
+          args:
+            - --model-id={{ .Values.tei.model }}
+            - --port=80
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: HF_HOME
+              value: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.tei.resources | nindent 12 }}
+          volumeMounts:
+            - name: model-cache
+              mountPath: /data
+      volumes:
+        - name: model-cache
+          {{- if .Values.tei.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-tei-cache
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }}

@@ -1,0 +1,21 @@
+{{- if .Values.tei.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-tei
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tei
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: savant-dataplane
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: tei
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.tei.service.port }}
+      targetPort: http
+{{- end }}

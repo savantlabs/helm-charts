@@ -33,3 +33,7 @@ spark:
     affinity: null
     extraVolumes: []
     extraVolumeMounts: []
+
+# TEI downloads a ~1.3 GB model on startup; disable in kind to keep install fast.
+tei:
+  enabled: false

@@ -1,0 +1,19 @@
+{{- if and .Values.tei.enabled .Values.tei.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-tei-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tei
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.tei.persistence.size }}
+  {{- with .Values.tei.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}
