@@ -100,8 +100,9 @@ spark:
     tag: v3.5.6_2.13
     pullPolicy: IfNotPresent
   master:
-    # The Bitnami chart hardcodes the master StatefulSet to replicas: 1. Our
-    # post-install hook (templates/spark-master-ha-hook.yaml) scales it to 3.
+    # HA master quorum. The vendored Bitnami chart adds support for this knob
+    # (upstream hardcodes replicas: 1). See charts/spark/SAVANT_PATCHES.md.
+    replicaCount: 3
     resources:
       requests:
         cpu: 1000m
@@ -165,6 +166,10 @@ spark:
                     operator: In
                     values: ["worker"]
               topologyKey: topology.kubernetes.io/zone
+    # Our vendored Bitnami fork gates its default single-master SPARK_MASTER_URL
+    # behind this flag so we can set the full 3-master quorum URL below without
+    # producing duplicate env keys. See charts/spark/SAVANT_PATCHES.md.
+    skipDefaultMasterUrl: true
     extraEnvVars:
       - name: SPARK_MASTER_URL
         value: >-
@@ -190,10 +195,3 @@ spark:
     extraVolumeMounts:
       - name: spark-worker-data
         mountPath: /opt/bitnami/spark/data
-
-# Internal knobs. Not part of the public values contract. Subject to change
-# without a chart version bump. Override only if directed by Savant support.
-_internal:
-  postInstallHooks:
-    sparkMasterHaScale:
-      enabled: true

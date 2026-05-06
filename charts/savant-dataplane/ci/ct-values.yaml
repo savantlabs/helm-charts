@@ -11,10 +11,11 @@ spark-operator:
   controller:
     replicas: 1
 
-# Kind can't satisfy the real Spark resource defaults; shrink everything,
-# and disable the master HA hook (single-node clusters can't schedule 3 masters).
+# Kind can't satisfy the real Spark resource defaults and can't schedule 3
+# masters; shrink everything.
 spark:
   master:
+    replicaCount: 1
     resources: {}
     podDisruptionBudget:
       enabled: false
@@ -25,8 +26,3 @@ spark:
     affinity: {}
     extraVolumes: []
     extraVolumeMounts: []
-
-_internal:
-  postInstallHooks:
-    sparkMasterHaScale:
-      enabled: false
