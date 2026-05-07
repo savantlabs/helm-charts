@@ -21,6 +21,11 @@ spec:
       labels:
         {{- include "savant-dataplane.labels" . | nindent 8 }}
         app.kubernetes.io/component: analytic-engine
+        # Legacy Kubernetes label — the agent's K8sService selects pods by
+        # `app=<name>` when it looks up a StatefulSet pods pool. Adding it
+        # here (pod template only, not the immutable StatefulSet selector)
+        # lets the modern chart coexist with the legacy agent label query.
+        app: analytic-engine
       annotations:
         # Single-replica Spark driver; losing the pod restarts all in-flight
         # analyses. Pin the pod to its node so voluntary disruption (autoscaler
