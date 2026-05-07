@@ -36,6 +36,17 @@ spec:
         - name: gcp-credential-config
           configMap:
             name: {{ $credConfigMap }}
+        # Projected EKS ServiceAccount token used by GCP Workload Identity
+        # Federation. The audience must match the WIF provider registered for
+        # this agent (set via savantConfig.controlPlane.wifAudience, auto-parsed
+        # from credentialConfig when available).
+        - name: gcp-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+                  audience: {{ include "savant-dataplane.wifAudience" . | quote }}
         - name: java-libs
           emptyDir: {}
       containers:
@@ -48,6 +59,9 @@ spec:
           volumeMounts:
             - name: gcp-credential-config
               mountPath: /var/run/gcp
+              readOnly: true
+            - name: gcp-token
+              mountPath: /var/run/secrets/gcp
               readOnly: true
             - name: java-libs
               mountPath: /opt/app/libs
@@ -115,11 +129,10 @@ spec:
                 configMapKeyRef:
                   name: savant-config
                   key: AWS_DEFAULT_REGION
-            - name: AWS_ROLE_ARN
-              valueFrom:
-                configMapKeyRef:
-                  name: savant-config
-                  key: AWS_ROLE_ARN
+            # AWS_ROLE_ARN and AWS_WEB_IDENTITY_TOKEN_FILE are injected by the
+            # EKS pod-identity webhook from the ServiceAccount annotation — do
+            # not set AWS_ROLE_ARN here or the webhook skips injection and the
+            # SDK's WebIdentityTokenCredentialsProvider can't find the token.
             {{- end }}
           resources:
             {{- toYaml .Values.agent.resources | nindent 12 }}
