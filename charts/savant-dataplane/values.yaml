@@ -122,6 +122,13 @@ spark:
     security:
       # Required because we pull Spark from a non-Bitnami registry.
       allowInsecureImages: true
+  # Reuse the chart's savant-agent ServiceAccount on master and worker pods so
+  # Spark executors inherit IRSA credentials (and WIF token mounts once the
+  # chart wires them for spark pods). Otherwise the Bitnami subchart creates
+  # its own unprivileged 'spark' SA and executors fail to authenticate to S3.
+  serviceAccount:
+    create: false
+    name: savant-agent
   image:
     registry: us-docker.pkg.dev
     repository: savant-prod/gcr.io/bitnami-spark
