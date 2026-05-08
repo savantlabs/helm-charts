@@ -1,0 +1,47 @@
+# Savant AWS preflight validator — configuration template.
+#
+# Copy this file to `savant-preflight.conf`, fill in the values for your
+# environment, then run:
+#
+#     ./validate-savant-dataplane-aws.sh savant-preflight.conf
+#
+# This file is shell-sourced. Use KEY=value with no spaces around `=`,
+# and quote values that contain spaces or special characters.
+
+# ----- required -------------------------------------------------------------
+
+# AWS region that hosts the EKS cluster.
+REGION=us-west-2
+
+# Name of the EKS cluster.
+CLUSTER=my-savant-cluster
+
+# Name of the S3 bucket provisioned for the Savant dataplane's working storage.
+BUCKET=my-savant-dataplane
+
+# Kubernetes namespace you will `helm install` the dataplane into.
+# Must match the `sub` claim in the IAM role's trust policy:
+#   system:serviceaccount:<NAMESPACE>:savant-agent
+NAMESPACE=savant
+
+# External ID condition value you generated for the Savant support role
+# (e.g. from `openssl rand -hex 20`). This is the same value you put in
+# the support role's trust policy, and the value Savant needs to assume
+# the role. The validator echoes it back in the onboarding block so it
+# ships to Savant alongside the other onboarding identifiers.
+SUPPORT_EXTERNAL_ID=REPLACE_WITH_THE_VALUE_YOU_GENERATED
+
+# ----- optional -------------------------------------------------------------
+
+# Name of the IAM role Savant pods assume via IRSA.
+# Leave unset to use the default (savant-dataplane).
+#ROLE_NAME=savant-dataplane
+
+# Name of the Savant support role.
+# Leave unset to use the default (savant-support).
+#SUPPORT_ROLE_NAME=savant-support
+
+# Customer-managed KMS key ARN — set this only if you configured BYOK
+# encryption on the S3 bucket. The validator will then confirm a
+# `savant-dataplane-kms` policy is attached to the role and references this key.
+#KMS_KEY_ARN=arn:aws:kms:us-west-2:123456789012:key/00000000-0000-0000-0000-000000000000
