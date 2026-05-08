@@ -1,0 +1,35 @@
+{{- if .Values.savantConfig.telemetry.remoteWrite.enabled }}
+# Namespace-scoped RBAC for the Alloy metrics forwarder. The upstream Alloy
+# subchart creates a ClusterRole by default; we disable that (rbac.create=false
+# in values.yaml) and grant only the permissions needed to discover Savant
+# pods in this release's namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: savant-metrics-forwarder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-forwarder
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: savant-metrics-forwarder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-forwarder
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: savant-metrics-forwarder
+subjects:
+  - kind: ServiceAccount
+    name: savant-metrics-forwarder
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -26,6 +26,12 @@ spec:
         # Remove these once the agent supports running multiple replicas.
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
         karpenter.sh/do-not-disrupt: "true"
+        # Prometheus scrape opt-in. Consumed by the in-chart Alloy forwarder
+        # when savantConfig.telemetry.remoteWrite is enabled, and by any
+        # customer-side Prometheus that honours the same convention.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
     spec:
       serviceAccountName: savant-agent
       {{- with .Values.agent.nodeSelector }}

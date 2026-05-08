@@ -89,7 +89,9 @@ Only values you are expected to set or override are listed. Subchart values (Zoo
 | `aws.externalId` | `""` | Optional customer-generated STS External ID. If set, rendered into the `savant-secrets` Secret and consumed by the analytic-engine for cross-account role assumption. |
 | `controlPlane.credentialConfig` | `""` | GCP Workload Identity Federation credential-config JSON. Delivered by Savant; contains no long-lived secrets. |
 | `controlPlane.existingCredentialConfigMap` | `""` | Alternative: reference a ConfigMap you manage yourself (External Secrets Operator, Vault CSI, etc.) containing `credential-config.json`. |
-| `telemetry.otlpEndpoint` | `""` | Optional OTLP gRPC endpoint. Savant pods emit OpenTelemetry signals; leave empty to disable export, or point at your cluster's collector (for example `http://otel-collector.observability:4317`). |
+| `telemetry.otlpEndpoint` | `""` | Optional OTLP gRPC endpoint for trace export. Leave empty to disable, or point at your cluster's collector (for example `http://otel-collector.observability:4317`). |
+| `telemetry.remoteWrite.enabled` | `true` | Deploys a [Grafana Alloy](https://grafana.com/docs/alloy/) pod that scrapes Savant Spring Boot pods and forwards the samples to Savant's hosted receiver so support can diagnose issues without remote shell access. Set to `false` to keep all telemetry inside your VPC — the dataplane functions identically, only Savant-side support visibility changes. |
+| `telemetry.remoteWrite.endpoint` | `https://metrics.savantlabs.io/api/v1/push` | Prometheus remote_write receiver. The default is the Savant hosted receiver; Savant's `savant-onboarding.yaml` can override it for you. |
 
 ### `agent`, `analyticEngine`, `tei`
 
@@ -118,6 +120,19 @@ All top-level keys below are passed directly to the upstream subchart. Do not ch
 - `zookeeper.*` — [Bitnami ZooKeeper](https://artifacthub.io/packages/helm/bitnami/zookeeper)
 - `spark.*` — Bitnami Spark (vendored fork under `charts/spark/`; see `charts/spark/SAVANT_PATCHES.md`)
 - `spark-operator.*` — [Kubeflow Spark Operator](https://artifacthub.io/packages/helm/spark-operator/spark-operator)
+- `alloy.*` — [Grafana Alloy](https://artifacthub.io/packages/helm/grafana/alloy). Only deployed when `savantConfig.telemetry.remoteWrite.enabled=true`. The chart renders its config (ConfigMap `savant-metrics-forwarder-config`) and a namespace-scoped `Role` / `RoleBinding` itself, so the subchart's own ConfigMap and ClusterRole are disabled in the values.
+
+#### Prometheus scrape annotations
+
+Savant's Spring Boot pods (`agent`, `analytic-engine`) carry the standard Prometheus opt-in annotations:
+
+```yaml
+prometheus.io/scrape: "true"
+prometheus.io/port: "8080"
+prometheus.io/path: "/actuator/prometheus"
+```
+
+The in-chart Alloy forwarder discovers pods this way, and if you run your own Prometheus in the same cluster you can scrape them the same way — no extra chart flag needed.
 
 ## Upgrade
 
