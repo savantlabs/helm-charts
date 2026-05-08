@@ -2,7 +2,7 @@ apiVersion: v2
 name: savant-dataplane
 description: Savant dataplane for self-managed Kubernetes deployments
 type: application
-version: 0.11.3
+version: 0.12.0
 appVersion: "1.0.0"
 home: https://savantlabs.io
 icon: https://assets.savantlabs.io/brand/icon.svg
@@ -26,3 +26,9 @@ dependencies:
   - name: spark
     version: 10.0.3
     condition: spark.enabled
+  # Grafana Alloy — metrics forwarder for Savant SaaS-side observability.
+  # Scrapes Savant pods' /actuator/prometheus and remote_writes to Savant.
+  - name: alloy
+    version: 1.8.1
+    repository: https://grafana.github.io/helm-charts
+    condition: savantConfig.telemetry.remoteWrite.enabled

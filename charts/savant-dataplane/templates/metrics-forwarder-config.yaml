@@ -1,0 +1,98 @@
+{{- if .Values.savantConfig.telemetry.remoteWrite.enabled }}
+# Alloy River config for the in-chart metrics forwarder. Discovers Savant pods
+# via `prometheus.io/scrape` annotations, scrapes /actuator/prometheus, drops
+# everything outside the allowlist, and remote_writes to the Savant-side
+# receiver populated from savantConfig.telemetry.remoteWrite.endpoint.
+#
+# The allowlist below is deliberately small — once a series appears in a
+# customer dashboard, removing it is a breaking change. Extend with care.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: savant-metrics-forwarder-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-forwarder
+data:
+  config.alloy: |
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces {
+        names = [{{ .Release.Namespace | quote }}]
+      }
+    }
+
+    discovery.relabel "savant_scrape_targets" {
+      targets = discovery.kubernetes.pods.targets
+
+      // Opt-in: only pods that declare prometheus.io/scrape=true.
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+        regex         = "true"
+        action        = "keep"
+      }
+
+      // Rewrite __address__ from pod IP + annotation port.
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_port", "__meta_kubernetes_pod_ip"]
+        regex         = "(\\d+);(.+)"
+        target_label  = "__address__"
+        replacement   = "$2:$1"
+      }
+
+      // Honour the annotation-declared metrics path.
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+        target_label  = "__metrics_path__"
+      }
+
+      // Expose Savant-relevant pod metadata as labels on the scraped series.
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component"]
+        target_label  = "savant_component"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+    }
+
+    prometheus.scrape "savant" {
+      targets         = discovery.relabel.savant_scrape_targets.output
+      forward_to      = [prometheus.relabel.allowlist.receiver]
+      scrape_interval = "1m"
+    }
+
+    prometheus.relabel "allowlist" {
+      forward_to = [prometheus.remote_write.savant.receiver]
+
+      // Keep only the allowlisted metric names. Anything else is dropped
+      // before it hits the WAL.
+      rule {
+        source_labels = ["__name__"]
+        regex         = "jvm_memory_used_bytes|jvm_memory_max_bytes|jvm_gc_pause_seconds.*|process_cpu_usage|system_cpu_usage|http_server_requests_seconds.*|savant_.*"
+        action        = "keep"
+      }
+    }
+
+    prometheus.remote_write "savant" {
+      endpoint {
+        url = {{ .Values.savantConfig.telemetry.remoteWrite.endpoint | quote }}
+
+        headers = {
+          "X-Scope-OrgID" = {{ .Values.savantConfig.agentId | quote }},
+        }
+      }
+
+      // Add tenant identity as an external label as well, so queries that
+      // don't respect the header still see which agent a series came from.
+      external_labels = {
+        tenant = {{ .Values.savantConfig.agentId | quote }},
+      }
+    }
+{{- end }}

@@ -32,10 +32,25 @@ savantConfig:
     # existingCredentialConfigMap.
     wifAudience: ""
   telemetry:
-    # OTLP endpoint for trace/metric export (gRPC). Leave empty to disable.
+    # OTLP endpoint for trace export (gRPC). Leave empty to disable.
     # Point Savant pods at your own OpenTelemetry Collector if you want to
     # capture the signals (e.g., http://otel-collector.observability:4317).
     otlpEndpoint: ""
+    # Prometheus remote_write forwarder. When enabled, an Alloy pod scrapes
+    # Savant pods' /actuator/prometheus endpoints and ships the samples to
+    # Savant's hosted receiver so support can diagnose issues without remote
+    # shell access. Pods are discovered via `prometheus.io/scrape=true`
+    # annotations — if you run your own Prometheus you can scrape them the
+    # same way.
+    #
+    # Set enabled=false to keep all telemetry inside your VPC. The dataplane
+    # functions identically either way; only Savant-side support visibility
+    # changes.
+    remoteWrite:
+      enabled: true
+      # Receiver URL. Savant's onboarding values file can override this;
+      # otherwise the default applies.
+      endpoint: https://metrics.savantlabs.io/api/v1/push
 
 # ZooKeeper (Bitnami subchart) — cluster-internal coordination service.
 # Customers normally should not touch this block. The escape hatches are exposed
@@ -337,3 +352,34 @@ analyticEngine:
     pool.savant.io/type: runtime
   service:
     port: 8080
+
+# Grafana Alloy (metrics forwarder subchart). Only deployed when
+# savantConfig.telemetry.remoteWrite.enabled is true. We render our own
+# ConfigMap (see templates/metrics-forwarder-config.yaml) and our own
+# namespace-scoped RBAC (see templates/metrics-forwarder-rbac.yaml), so the
+# subchart is configured to not create those itself.
+alloy:
+  alloy:
+    configMap:
+      create: false
+      name: savant-metrics-forwarder-config
+      key: config.alloy
+    clustering:
+      enabled: false
+  controller:
+    type: deployment
+    replicas: 1
+    nodeSelector:
+      pool.savant.io/type: service
+  serviceAccount:
+    create: true
+    name: savant-metrics-forwarder
+  rbac:
+    create: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
