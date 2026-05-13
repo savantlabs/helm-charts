@@ -132,6 +132,13 @@ spec:
               value: /var/run/gcp/credential-config.json
             - name: GOOGLE_CLOUD_PROJECT
               value: {{ .Values.savantConfig.controlPlane.gcpProject | quote }}
+            # WIF audience propagated to Spark driver/executor pods spawned by
+            # the runtime. Spring relaxed-binding maps it to
+            # runtime.sparkApp.wifAudience; a non-blank value flips the runtime
+            # from mounting the long-lived spark-gcs-key Secret to mounting the
+            # gcp-credential-config ConfigMap + a projected SA token.
+            - name: RUNTIME_SPARKAPP_WIFAUDIENCE
+              value: {{ include "savant-dataplane.wifAudience" . | quote }}
             - name: RUNTIME_VPC_CLOUD_PROVIDER
               value: {{ .Values.savantConfig.cloudProvider | quote }}
             # Spring relaxed-binding: maps to `agent.cloudProvider`, which
