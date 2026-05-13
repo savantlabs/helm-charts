@@ -3,6 +3,40 @@ entries:
   savant-dataplane:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-05-13T23:31:20.831759491Z"
+    dependencies:
+    - condition: zookeeper.enabled
+      name: zookeeper
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.8.7
+    - condition: spark-operator.enabled
+      name: spark-operator
+      repository: https://kubeflow.github.io/spark-operator
+      version: 2.5.0
+    - condition: spark.enabled
+      name: spark
+      repository: ""
+      version: 10.0.3
+    - condition: savantConfig.telemetry.remoteWrite.enabled
+      name: alloy
+      repository: https://grafana.github.io/helm-charts
+      version: 1.8.1
+    description: Savant dataplane for self-managed Kubernetes deployments
+    digest: ce26580376e11ef82252b395bf84c503692259642394ef2fe750803daa4f52b0
+    home: https://savantlabs.io
+    icon: https://assets.savantlabs.io/brand/icon.svg
+    maintainers:
+    - name: savantlabs
+      url: https://github.com/savantlabs
+    name: savant-dataplane
+    sources:
+    - https://github.com/savantlabs/helm-charts
+    type: application
+    urls:
+    - https://github.com/savantlabs/helm-charts/releases/download/savant-dataplane-0.12.1/savant-dataplane-0.12.1.tgz
+    version: 0.12.1
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-05-08T20:52:29.796788926Z"
     dependencies:
     - condition: zookeeper.enabled
@@ -146,4 +180,4 @@ entries:
     urls:
     - https://github.com/savantlabs/helm-charts/releases/download/savant-dataplane-0.2.0/savant-dataplane-0.2.0.tgz
     version: 0.2.0
-generated: "2026-05-08T20:52:29.796806803Z"
+generated: "2026-05-13T23:31:20.831795097Z"
