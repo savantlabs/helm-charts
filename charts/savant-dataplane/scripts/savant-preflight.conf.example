@@ -41,6 +41,10 @@ SUPPORT_EXTERNAL_ID=REPLACE_WITH_THE_VALUE_YOU_GENERATED
 # Leave unset to use the default (savant-support).
 #SUPPORT_ROLE_NAME=savant-support
 
+# Name of the IRSA role used by the Kubernetes Cluster Autoscaler.
+# Leave unset to use the default (cluster-autoscaler).
+#AUTOSCALER_ROLE_NAME=cluster-autoscaler
+
 # Customer-managed KMS key ARN — set this only if you configured BYOK
 # encryption on the S3 bucket. The validator will then confirm a
 # `savant-dataplane-kms` policy is attached to the role and references this key.

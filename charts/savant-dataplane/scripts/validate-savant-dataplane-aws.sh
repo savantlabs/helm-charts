@@ -32,9 +32,10 @@
 #
 # Optional keys:
 #
-#   ROLE_NAME           Defaults to savant-dataplane
-#   SUPPORT_ROLE_NAME   Defaults to savant-support
-#   KMS_KEY_ARN         ARN of customer-managed KMS key (BYOK only)
+#   ROLE_NAME             Defaults to savant-dataplane
+#   SUPPORT_ROLE_NAME     Defaults to savant-support
+#   AUTOSCALER_ROLE_NAME  Defaults to cluster-autoscaler
+#   KMS_KEY_ARN           ARN of customer-managed KMS key (BYOK only)
 #
 # Exit codes:
 #   0  all required checks passed (warnings allowed)
@@ -83,6 +84,7 @@ BUCKET=""
 NAMESPACE=""
 ROLE_NAME="savant-dataplane"
 SUPPORT_ROLE_NAME="savant-support"
+AUTOSCALER_ROLE_NAME="cluster-autoscaler"
 SUPPORT_EXTERNAL_ID=""
 KMS_KEY_ARN=""
 
@@ -756,6 +758,55 @@ else
 fi
 
 # ============================================================================
+# Cluster-autoscaler IRSA role
+# ============================================================================
+section "IAM autoscaler role: $AUTOSCALER_ROLE_NAME"
+
+AUTOSCALER_ROLE_JSON=$(aws_q iam get-role --role-name "$AUTOSCALER_ROLE_NAME" | jq '.Role // empty')
+if [[ -z "$AUTOSCALER_ROLE_JSON" ]]; then
+  fail "role $AUTOSCALER_ROLE_NAME does not exist" \
+       "cluster-autoscaler IRSA role; required for runtime/spark pools to scale"
+else
+  pass "role $AUTOSCALER_ROLE_NAME exists"
+
+  # Trust policy: Federated to cluster OIDC, sub bound to the autoscaler SA.
+  if [[ -n "$OIDC_ISSUER" ]]; then
+    oidc_host_path=${OIDC_ISSUER#https://}
+    expected_fed="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${oidc_host_path}"
+    expected_sub="system:serviceaccount:kube-system:cluster-autoscaler-aws-cluster-autoscaler"
+
+    fed=$(echo "$AUTOSCALER_ROLE_JSON" | jq -r '.AssumeRolePolicyDocument.Statement[]?.Principal.Federated // empty' | head -n1)
+    if [[ "$fed" == "$expected_fed" ]]; then
+      pass "trust policy federated to cluster OIDC provider"
+    else
+      fail "trust policy Federated = '$fed'" "expected $expected_fed"
+    fi
+
+    sub=$(echo "$AUTOSCALER_ROLE_JSON" | jq -r '
+      .AssumeRolePolicyDocument.Statement[]?.Condition.StringEquals // empty
+      | to_entries[]? | select(.key | endswith(":sub")) | .value' | head -n1)
+    if [[ "$sub" == "$expected_sub" ]]; then
+      pass "trust policy sub = $expected_sub"
+    else
+      fail "trust policy sub = '$sub'" "expected $expected_sub"
+    fi
+  else
+    warn "cannot verify trust policy — OIDC issuer unknown"
+  fi
+
+  # Effective permissions — representative actions from each Sid in the
+  # setup doc's autoscaler policy. Scale actions live behind a
+  # ResourceTag condition that this content check skips, so we only
+  # assert the unconditional describe actions here.
+  autoscaler_stmts=$(role_allow_statements "$AUTOSCALER_ROLE_NAME")
+  role_warn_unsupported "$AUTOSCALER_ROLE_NAME" "role $AUTOSCALER_ROLE_NAME"
+
+  assert_role_grants "$autoscaler_stmts" "autoscaling:DescribeAutoScalingGroups" "*"
+  assert_role_grants "$autoscaler_stmts" "autoscaling:DescribeTags"              "*"
+  assert_role_grants "$autoscaler_stmts" "ec2:DescribeInstanceTypes"             "*"
+fi
+
+# ============================================================================
 # Summary
 # ============================================================================
 section "Summary"
@@ -767,7 +818,7 @@ cat <<'EOF'
 
 Not verified by this script — requires cluster access or runtime probe:
   - Default StorageClass exists with volumeBindingMode=WaitForFirstConsumer
-  - Cluster-autoscaler (or Karpenter) is deployed and healthy in the cluster
+  - Cluster-autoscaler (or Karpenter) deployment is running and healthy
   - Pool labels applied via launch-template user-data (visible only to kubectl)
   - PodDisruptionBudgets configured (required if using SPOT)
   - aws-node-termination-handler running (required if self-managed + SPOT)
