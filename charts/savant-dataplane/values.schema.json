@@ -134,7 +134,28 @@
     "zookeeper":      { "type": "object" },
     "spark":          { "type": "object" },
     "spark-operator": { "type": "object" },
-    "global":         { "type": "object" }
+    "global":         { "type": "object" },
+    "_internal": {
+      "type": "object",
+      "description": "Internal knobs — not part of the customer-facing values API.",
+      "properties": {
+        "agent": {
+          "type": "object",
+          "properties": {
+            "forceReplicas": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "analyticEngine": {
+          "type": "object",
+          "properties": {
+            "forceReplicas": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "$defs": {
     "component": {

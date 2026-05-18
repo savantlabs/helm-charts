@@ -9,7 +9,7 @@ metadata:
     {{- include "savant-dataplane.labels" . | nindent 4 }}
     app.kubernetes.io/component: agent
 spec:
-  replicas: {{ .Values.agent.replicaCount }}
+  {{- include "savant-dataplane.replicas" (dict "ctx" . "kind" "Deployment" "name" "agent" "replicas" .Values.agent.replicaCount "force" .Values._internal.agent.forceReplicas) | nindent 2 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: savant-dataplane

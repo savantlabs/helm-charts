@@ -383,3 +383,16 @@ alloy:
     limits:
       cpu: 500m
       memory: 512Mi
+
+# Internal knobs — not part of the customer-facing values API. Subject to
+# change without notice between chart versions.
+_internal:
+  # Replica reconciliation control. By default, `spec.replicas` is rendered
+  # only on first install; subsequent `helm upgrade` runs omit the field so
+  # out-of-band scaling (Savant agent k8s client, `kubectl scale`) survives
+  # upgrades. Set forceReplicas=true to make `helm upgrade` reassert the
+  # configured replicaCount — recovery escape hatch for ops.
+  agent:
+    forceReplicas: false
+  analyticEngine:
+    forceReplicas: false

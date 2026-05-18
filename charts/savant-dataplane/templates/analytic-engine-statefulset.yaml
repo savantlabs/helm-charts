@@ -9,7 +9,7 @@ metadata:
     {{- include "savant-dataplane.labels" . | nindent 4 }}
     app.kubernetes.io/component: analytic-engine
 spec:
-  replicas: {{ .Values.analyticEngine.replicaCount }}
+  {{- include "savant-dataplane.replicas" (dict "ctx" . "kind" "StatefulSet" "name" "analytic-engine" "replicas" .Values.analyticEngine.replicaCount "force" .Values._internal.analyticEngine.forceReplicas) | nindent 2 }}
   serviceName: analytic-engine
   selector:
     matchLabels:
