@@ -19,6 +19,16 @@ future upstream merges are straightforward.
      with our workers receiving the full 3-master quorum URL via
      `worker.extraEnvVars`. Kubernetes 1.28+ rejects duplicate env keys.
 
+3. `templates/statefulset-worker.yaml`
+   - `replicas: {{ .Values.worker.replicaCount }}` is now rendered only on
+     first install (resource not yet present), via a `lookup` guard.
+   - Reason: worker count is reconciled at runtime by the Savant agent
+     (derived from analytic-engine count). Omitting `replicas` from the
+     applied manifest on subsequent upgrades lets Kubernetes' 3-way merge
+     leave the live value alone, so agent-driven scaling survives
+     `helm upgrade`. Recovery path is `kubectl scale` if the agent's
+     reconciliation is wedged.
+
 ## Upstream sync
 
 When bumping the vendored version:

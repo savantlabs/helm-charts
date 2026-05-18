@@ -15,7 +15,10 @@ metadata:
   {{- end }}
 spec:
   serviceName: {{ printf "%s-headless" (include "common.names.fullname" .) }}
+  {{- $workerName := printf "%s-worker" (include "common.names.fullname" .) }}
+  {{- if not (lookup "apps/v1" "StatefulSet" (include "common.names.namespace" .) $workerName) }}
   replicas: {{ .Values.worker.replicaCount }}
+  {{- end }}
   podManagementPolicy: {{ .Values.worker.podManagementPolicy }}
   {{- if .Values.worker.updateStrategy }}
   updateStrategy: {{- toYaml .Values.worker.updateStrategy | nindent 4 }}

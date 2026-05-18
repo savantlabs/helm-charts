@@ -19,3 +19,18 @@ audience must be declared separately via savantConfig.controlPlane.wifAudience).
 {{- end -}}
 {{- $audience -}}
 {{- end -}}
+
+{{/*
+Render `replicas: N` only on first install (resource doesn't yet exist) or
+when the caller opts back in via `force=true`. On a normal `helm upgrade`
+the field is omitted so the live value — set by the Savant agent's k8s
+client or `kubectl scale` — is preserved across upgrades.
+
+Args (dict): ctx, kind, name, replicas, force
+*/}}
+{{- define "savant-dataplane.replicas" -}}
+{{- $existing := lookup "apps/v1" .kind .ctx.Release.Namespace .name -}}
+{{- if or (not $existing) .force -}}
+replicas: {{ .replicas }}
+{{- end -}}
+{{- end -}}
