@@ -104,7 +104,7 @@ spec:
             - name: shared-data
               mountPath: /mnt/shared-data
           env:
-            - name: RUNTIME_SPARK_MASTER
+            - name: RUNTIME_SPARKSESSION_MASTER
               value: "spark://spark-master-0.spark-headless:7077,spark-master-1.spark-headless:7077,spark-master-2.spark-headless:7077"
             - name: SPARK_LOCAL_IP
               valueFrom:
