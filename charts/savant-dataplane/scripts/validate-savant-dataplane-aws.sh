@@ -299,78 +299,17 @@ if [[ $BUCKET_OK -eq 1 ]]; then
     fail "bucket region ($loc) does not match --region ($REGION)"
   fi
 
-  # Versioning
-  ver=$(aws_q s3api get-bucket-versioning --bucket "$BUCKET" | jq -r '.Status // "Disabled"')
-  if [[ "$ver" == "Enabled" ]]; then
-    pass "versioning enabled"
-  else
-    fail "versioning is $ver" "required: Enabled"
-  fi
-
-  # Public-access block
-  pab=$(aws_q s3api get-public-access-block --bucket "$BUCKET" | jq -r '.PublicAccessBlockConfiguration // empty')
-  if [[ -z "$pab" ]]; then
-    fail "public-access block not configured"
-  else
-    all_true=$(echo "$pab" | jq -r '[.BlockPublicAcls, .IgnorePublicAcls, .BlockPublicPolicy, .RestrictPublicBuckets] | all')
-    if [[ "$all_true" == "true" ]]; then
-      pass "all four public-access blocks enabled"
-    else
-      fail "not all public-access blocks are enabled" "required: all four true"
-    fi
-  fi
-
-  # Ownership
-  own=$(aws_q s3api get-bucket-ownership-controls --bucket "$BUCKET" \
-        | jq -r '.OwnershipControls.Rules[0].ObjectOwnership // "unknown"')
-  if [[ "$own" == "BucketOwnerEnforced" ]]; then
-    pass "object ownership = BucketOwnerEnforced (ACLs disabled)"
-  else
-    fail "object ownership = $own" "required: BucketOwnerEnforced"
-  fi
-
-  # Encryption
-  enc=$(aws_q s3api get-bucket-encryption --bucket "$BUCKET" \
-        | jq -r '.ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm // "none"')
-  case "$enc" in
-    AES256)   pass "encryption at rest: SSE-S3" ;;
-    aws:kms)  pass "encryption at rest: SSE-KMS" ;;
-    none)     fail "encryption at rest not configured" ;;
-    *)        fail "encryption at rest: unexpected algorithm $enc" ;;
-  esac
-
-  # TLS-only bucket policy
-  pol=$(aws_q s3api get-bucket-policy --bucket "$BUCKET" | jq -r '.Policy // empty')
-  if [[ -z "$pol" ]]; then
-    fail "no bucket policy present" "required: TLS-only Deny statement"
-  else
-    tls_deny=$(echo "$pol" | jq -r '
-      fromjson? // .
-      | .Statement[]?
-      | select(.Effect == "Deny"
-               and (.Condition.Bool."aws:SecureTransport" // "") == "false")
-      | "found"' | head -n1)
-    if [[ "$tls_deny" == "found" ]]; then
-      pass "bucket policy denies non-TLS access (aws:SecureTransport=false)"
-    else
-      fail "bucket policy does not deny aws:SecureTransport=false"
-    fi
-  fi
+  # The only Savant-required bucket-level setting is the tmp/ 7-day lifecycle
+  # rule (Savant writes transient scratch data under tmp/ and does not delete
+  # it inline). Everything else below is standard S3 hygiene that most orgs
+  # already enforce org-wide; we report it as a warn so customers see the
+  # state without having the preflight gate the install.
 
   # Lifecycle rules
   lc=$(aws_q s3api get-bucket-lifecycle-configuration --bucket "$BUCKET" | jq '.Rules // []')
   if [[ "$lc" == "[]" || -z "$lc" ]]; then
-    fail "no lifecycle configuration" "required: noncurrent 7d + tmp/ 7d"
+    fail "no lifecycle rule expires tmp/ objects after 7 days" "REQUIRED — without this, scratch data accumulates indefinitely"
   else
-    noncurrent=$(echo "$lc" | jq -r '
-      [.[] | select((.Status == "Enabled")
-                    and (.NoncurrentVersionExpiration.NoncurrentDays == 7))] | length')
-    if [[ "$noncurrent" -ge 1 ]]; then
-      pass "noncurrent version expiration rule = 7 days"
-    else
-      fail "no enabled rule expires noncurrent versions at 7 days"
-    fi
-
     tmp_rule=$(echo "$lc" | jq -r '
       [.[]
        | select(.Status == "Enabled")
@@ -381,16 +320,88 @@ if [[ $BUCKET_OK -eq 1 ]]; then
     if [[ "$tmp_rule" -ge 1 ]]; then
       pass "tmp/ prefix lifecycle rule = 7-day expiration"
     else
-      fail "no enabled lifecycle rule expires tmp/ objects after 7 days" "this is REQUIRED"
+      fail "no lifecycle rule expires tmp/ objects after 7 days" "REQUIRED — without this, scratch data accumulates indefinitely"
     fi
   fi
 
-  # Access logging (recommended only)
+  # ---- recommended (standard S3 hygiene; not required by Savant) ----------
+
+  # Versioning
+  ver=$(aws_q s3api get-bucket-versioning --bucket "$BUCKET" | jq -r '.Status // "Disabled"')
+  if [[ "$ver" == "Enabled" ]]; then
+    pass "versioning enabled (recommended)"
+
+    # Noncurrent-version expiration only meaningful when versioning is on.
+    if [[ "$lc" != "[]" && -n "$lc" ]]; then
+      noncurrent=$(echo "$lc" | jq -r '
+        [.[] | select((.Status == "Enabled")
+                      and (.NoncurrentVersionExpiration.NoncurrentDays == 7))] | length')
+      if [[ "$noncurrent" -ge 1 ]]; then
+        pass "noncurrent version expiration rule = 7 days (recommended)"
+      else
+        warn "no rule expires noncurrent versions at 7 days" "recommended when versioning is enabled"
+      fi
+    fi
+  else
+    warn "versioning is $ver" "recommended: Enabled"
+  fi
+
+  # Public-access block
+  pab=$(aws_q s3api get-public-access-block --bucket "$BUCKET" | jq -r '.PublicAccessBlockConfiguration // empty')
+  if [[ -z "$pab" ]]; then
+    warn "public-access block not configured" "recommended (default for new buckets since April 2023)"
+  else
+    all_true=$(echo "$pab" | jq -r '[.BlockPublicAcls, .IgnorePublicAcls, .BlockPublicPolicy, .RestrictPublicBuckets] | all')
+    if [[ "$all_true" == "true" ]]; then
+      pass "all four public-access blocks enabled (recommended)"
+    else
+      warn "not all public-access blocks are enabled" "recommended: all four true"
+    fi
+  fi
+
+  # Ownership
+  own=$(aws_q s3api get-bucket-ownership-controls --bucket "$BUCKET" \
+        | jq -r '.OwnershipControls.Rules[0].ObjectOwnership // "unknown"')
+  if [[ "$own" == "BucketOwnerEnforced" ]]; then
+    pass "object ownership = BucketOwnerEnforced (recommended)"
+  else
+    warn "object ownership = $own" "recommended: BucketOwnerEnforced"
+  fi
+
+  # Encryption
+  enc=$(aws_q s3api get-bucket-encryption --bucket "$BUCKET" \
+        | jq -r '.ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm // "none"')
+  case "$enc" in
+    AES256)   pass "encryption at rest: SSE-S3 (recommended)" ;;
+    aws:kms)  pass "encryption at rest: SSE-KMS (recommended)" ;;
+    none)     warn "encryption at rest not configured" "recommended (SSE-S3 is the AWS default since January 2023)" ;;
+    *)        warn "encryption at rest: unexpected algorithm $enc" ;;
+  esac
+
+  # TLS-only bucket policy
+  pol=$(aws_q s3api get-bucket-policy --bucket "$BUCKET" | jq -r '.Policy // empty')
+  if [[ -z "$pol" ]]; then
+    warn "no bucket policy present" "recommended: deny aws:SecureTransport=false"
+  else
+    tls_deny=$(echo "$pol" | jq -r '
+      fromjson? // .
+      | .Statement[]?
+      | select(.Effect == "Deny"
+               and (.Condition.Bool."aws:SecureTransport" // "") == "false")
+      | "found"' | head -n1)
+    if [[ "$tls_deny" == "found" ]]; then
+      pass "bucket policy denies non-TLS access (recommended)"
+    else
+      warn "bucket policy does not deny aws:SecureTransport=false" "recommended"
+    fi
+  fi
+
+  # Access logging
   log=$(aws_q s3api get-bucket-logging --bucket "$BUCKET" | jq -r '.LoggingEnabled // empty')
   if [[ -n "$log" ]]; then
     pass "server access logging enabled (recommended)"
   else
-    warn "server access logging not enabled" "recommended, not required"
+    warn "server access logging not enabled" "recommended"
   fi
 fi
 
