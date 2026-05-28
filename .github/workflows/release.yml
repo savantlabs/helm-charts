@@ -1,6 +1,9 @@
 name: release
 
 on:
+  push:
+    branches: [main]
+    paths: ['charts/**']
   workflow_dispatch:
 
 permissions:
