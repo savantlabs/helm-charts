@@ -1,11 +1,17 @@
 {{- if .Values.savantConfig.telemetry.remoteWrite.enabled }}
 # Alloy River config for the in-chart metrics forwarder. Discovers Savant pods
-# via `prometheus.io/scrape` annotations, scrapes /actuator/prometheus, drops
-# everything outside the allowlist, and remote_writes to the Savant-side
-# receiver populated from savantConfig.telemetry.remoteWrite.endpoint.
+# via `prometheus.io/scrape` annotations, scrapes /actuator/prometheus, and
+# remote_writes to the Savant-side receiver populated from
+# savantConfig.telemetry.remoteWrite.endpoint.
 #
-# The allowlist below is deliberately small — once a series appears in a
-# customer dashboard, removing it is a breaking change. Extend with care.
+# Filtering is denylist-based: anything Spring Boot / Micrometer exposes
+# flows through unless explicitly dropped. New metrics surface in Mimir as
+# soon as the code that emits them ships — no chart change required.
+#
+# The cardinality risk worth defending against is a metric whose label set
+# embeds user data (customer ID, query text, file path). If one of those
+# slips through, add a `drop` rule below — keep it metric-name-specific so
+# unrelated series aren't collateral damage.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -64,20 +70,21 @@ data:
 
     prometheus.scrape "savant" {
       targets         = discovery.relabel.savant_scrape_targets.output
-      forward_to      = [prometheus.relabel.allowlist.receiver]
+      forward_to      = [prometheus.relabel.denylist.receiver]
       scrape_interval = "1m"
     }
 
-    prometheus.relabel "allowlist" {
+    prometheus.relabel "denylist" {
       forward_to = [prometheus.remote_write.savant.receiver]
 
-      // Keep only the allowlisted metric names. Anything else is dropped
-      // before it hits the WAL.
-      rule {
-        source_labels = ["__name__"]
-        regex         = "jvm_memory_used_bytes|jvm_memory_max_bytes|jvm_gc_pause_seconds.*|process_cpu_usage|system_cpu_usage|http_server_requests_seconds.*|savant_.*"
-        action        = "keep"
-      }
+      // Drops go here, one rule per offender. Empty by default.
+      // Example, if some_metric ever embeds user data in its labels:
+      //
+      //   rule {
+      //     source_labels = ["__name__"]
+      //     regex         = "some_metric"
+      //     action        = "drop"
+      //   }
     }
 
     prometheus.remote_write "savant" {
