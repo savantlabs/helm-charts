@@ -323,6 +323,18 @@ agent:
       memory: 6Gi
   nodeSelector:
     pool.savant.io/type: service
+  # Local scratch space for staged file downloads. Large sources (e.g. multi-GB
+  # OneDrive/CSV files) are cached under /opt/app/.tmp before processing. When
+  # enabled, a dedicated CSI volume is provisioned per pod and deleted with it,
+  # so large files don't consume the node's ephemeral storage. The volume is
+  # bound after the pod is scheduled, so it lands in the pod's availability zone
+  # and is not pinned across restarts. Set enabled: false to fall back to an
+  # emptyDir on the node disk (requires a node pool with sufficient disk).
+  persistence:
+    enabled: true
+    size: 100Gi
+    # storageClass unset: uses the cluster's default StorageClass (gp3 EBS on
+    # EKS). Override via `global.storageClass` or `agent.persistence.storageClass`.
   service:
     port: 8080
 
