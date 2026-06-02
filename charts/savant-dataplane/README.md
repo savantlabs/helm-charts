@@ -113,6 +113,16 @@ Each exposes the same shape. Override `image.tag` only if Savant support has dir
 | `tei.persistence.size` | `10Gi` | PVC size. |
 | `tei.persistence.storageClass` | *(unset)* | Uses the cluster's default StorageClass. Override here or use `global.storageClass` to drive all subcharts at once. |
 
+### Agent scratch storage
+
+The agent stages source file downloads (e.g. multi-GB OneDrive or CSV files) on local scratch before processing. By default this is a dedicated per-pod volume, provisioned when the pod starts and deleted when it stops, so large files do not consume the node's ephemeral storage and cannot evict the pod. The volume is bound after the pod is scheduled, so it lands in the pod's availability zone and is never pinned across restarts.
+
+| Key | Default | Description |
+|---|---|---|
+| `agent.persistence.enabled` | `true` | Provision a dedicated scratch volume per pod for staged file downloads. Set `false` to use an `emptyDir` on the node disk instead (requires a service node pool with enough disk for your largest source file). |
+| `agent.persistence.size` | `100Gi` | Scratch volume size. Should comfortably exceed your largest single source file plus extraction overhead. |
+| `agent.persistence.storageClass` | *(unset)* | Uses the cluster's default StorageClass. Override here or use `global.storageClass` to drive all subcharts at once. |
+
 ### Subchart passthrough
 
 All top-level keys below are passed directly to the upstream subchart. Do not change them unless you have a specific reason.

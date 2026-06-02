@@ -55,6 +55,27 @@ spec:
                   audience: {{ include "savant-dataplane.wifAudience" . | quote }}
         - name: java-libs
           emptyDir: {}
+        # Local scratch for staged file downloads (e.g. multi-GB OneDrive/CSV
+        # sources cached under /opt/app/.tmp before processing). When persistence
+        # is enabled this is a dedicated CSI volume so large files don't consume
+        # the node's ephemeral storage; otherwise it falls back to an emptyDir on
+        # the node disk.
+        - name: agent-tmp
+          {{- if .Values.agent.persistence.enabled }}
+          ephemeral:
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: {{ .Values.agent.persistence.size }}
+                {{- with .Values.agent.persistence.storageClass }}
+                storageClassName: {{ . | quote }}
+                {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
       containers:
         - name: spring-boot
           image: "{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
@@ -71,6 +92,8 @@ spec:
               readOnly: true
             - name: java-libs
               mountPath: /opt/app/libs
+            - name: agent-tmp
+              mountPath: /opt/app/.tmp
           env:
             - name: OTEL_K8S_NAMESPACE
               valueFrom:
