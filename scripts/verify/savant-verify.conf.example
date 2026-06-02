@@ -1,0 +1,23 @@
+# Savant dataplane post-install verifier — configuration template.
+#
+# Copy this file to `savant-verify.conf`, fill in the values for your
+# environment, then run:
+#
+#     ./verify-savant-dataplane.sh savant-verify.conf
+#
+# This file is shell-sourced. Use KEY=value with no spaces around `=`,
+# and quote values that contain spaces or special characters.
+
+# ----- required -------------------------------------------------------------
+
+# Kubernetes namespace the dataplane was installed into (the `--namespace`
+# you passed to `helm install`). The verifier expects every dataplane
+# resource to live in this namespace.
+NAMESPACE=savant
+
+# ----- optional -------------------------------------------------------------
+
+# Helm release name. Defaults to savant-dataplane (matches the install
+# command in the chart README). Override only if you installed under a
+# different release name.
+#RELEASE=savant-dataplane
