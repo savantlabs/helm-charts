@@ -33,6 +33,15 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/actuator/prometheus"
     spec:
+      # The agent runs as uid/gid 1001 (app). Mounted volumes — the scratch
+      # volume at /opt/app/.tmp (CSI volume or emptyDir) — come up root-owned, so
+      # without fsGroup the agent can't create its cache dir there. fsGroup makes
+      # the mount group-writable by 1001; OnRootMismatch skips the recursive
+      # chown on restart when the volume root is already group-owned correctly,
+      # which matters for a large populated scratch volume.
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
       serviceAccountName: savant-agent
       {{- with .Values.agent.nodeSelector }}
       nodeSelector:
