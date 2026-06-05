@@ -823,13 +823,18 @@ else
       fail "projected GCP token is not a JWT" "got $(echo "$token" | wc -c) bytes, no 3-segment shape"
     else
       pass "projected GCP token mounted at /var/run/secrets/gcp/token"
-      payload_b64=$(echo "$token" | cut -d. -f2)
-      # base64url → base64 with padding
+      # base64url → base64. Strip any existing padding, then re-pad to a
+      # multiple of 4. The seq-based `printf '%.0s='` idiom emits a stray
+      # '=' when pad is 0 (printf runs once with no args), corrupting
+      # already-aligned payloads; `printf '%*s'` emits exactly pad spaces
+      # (zero when pad is 0), which we translate to '='.
+      payload_b64=$(echo "$token" | cut -d. -f2 | tr -d '=')
       pad=$(( (4 - ${#payload_b64} % 4) % 4 ))
-      payload_b64_padded="${payload_b64}$(printf '%.0s=' $(seq 1 $pad))"
+      payload_b64_padded="${payload_b64}$(printf '%*s' "$pad" '' | tr ' ' '=')"
       payload=$(echo "$payload_b64_padded" | tr '_-' '/+' | base64 -d 2>/dev/null || true)
-      if ! echo "$payload" | jq empty 2>/dev/null; then
-        warn "could not decode JWT payload" "skipping aud / exp check"
+      if [[ -z "$payload" ]] || ! echo "$payload" | jq empty 2>/dev/null; then
+        warn "could not decode JWT payload" \
+             "skipping aud / exp check — not a verdict on the token itself"
       else
         # Kubernetes projected SA tokens encode aud as a JSON array (the
         # spec allows multiple audiences). Match WIF_AUDIENCE against any
