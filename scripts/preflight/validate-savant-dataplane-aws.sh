@@ -28,12 +28,15 @@
 #   CLUSTER               EKS cluster name
 #   BUCKET                S3 bucket provisioned for the dataplane
 #   NAMESPACE             Kubernetes namespace you will helm-install into
-#   SUPPORT_EXTERNAL_ID   Value you set as sts:ExternalId on the support role
 #
 # Optional keys:
 #
 #   ROLE_NAME           Defaults to savant-dataplane
 #   SUPPORT_ROLE_NAME   Defaults to savant-support
+#   SUPPORT_EXTERNAL_ID Value you set as sts:ExternalId on the support role.
+#                       Leave unset if you have not generated it yet — the
+#                       support-role checks still run, and a missing
+#                       sts:ExternalId condition is reported as a failure.
 #   KMS_KEY_ARN         ARN of customer-managed KMS key (BYOK only)
 #
 # Exit codes:
@@ -90,7 +93,7 @@ KMS_KEY_ARN=""
 source "$CONFIG_FILE"
 
 missing=()
-for required in REGION CLUSTER BUCKET NAMESPACE SUPPORT_EXTERNAL_ID; do
+for required in REGION CLUSTER BUCKET NAMESPACE; do
   if [[ -z "${!required}" ]]; then
     missing+=("$required")
   fi
@@ -625,8 +628,17 @@ else
   ext_id=$(echo "$SUPPORT_JSON" | jq -r '
     .AssumeRolePolicyDocument.Statement[]?.Condition.StringEquals."sts:ExternalId" // empty' | head -n1)
   if [[ -z "$ext_id" ]]; then
+    # Missing condition is a failure regardless of whether SUPPORT_EXTERNAL_ID
+    # was provided — the setup guide requires it, and without it any principal
+    # in Savant's account could assume the role.
     fail "trust policy is missing sts:ExternalId condition" \
          "without this, ANY principal in Savant's account could assume the role"
+  elif [[ -z "$SUPPORT_EXTERNAL_ID" ]]; then
+    # Role has an ExternalId condition but config did not provide one to
+    # compare against. Surface the value so the customer can confirm it is the
+    # one they intend to send to Savant, then set it in the config.
+    warn "trust policy has an sts:ExternalId condition but SUPPORT_EXTERNAL_ID is unset in config" \
+         "set SUPPORT_EXTERNAL_ID to '$ext_id' (the value on the role) so it ships in the onboarding block"
   elif [[ "$ext_id" == "$SUPPORT_EXTERNAL_ID" ]]; then
     pass "trust policy ExternalId matches SUPPORT_EXTERNAL_ID in config"
   else
@@ -799,6 +811,11 @@ if [[ $FAIL -gt 0 ]]; then
 fi
 printf "${C_BOLD}%s${C_RESET}\n\n" "────────────────────────────────────────────────────────────"
 
+# Prefer the config value; fall back to the value read off the role's trust
+# policy; otherwise emit a visible marker so an empty value never ships silently.
+onboarding_ext_id="${SUPPORT_EXTERNAL_ID:-${ext_id:-}}"
+onboarding_ext_id="${onboarding_ext_id:-<missing — generate an External ID, set it on the support role and in this config, then re-run>}"
+
 cat <<EOF
 # Savant onboarding values — generated $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 AWS_REGION="$REGION"
@@ -808,7 +825,7 @@ EKS_OIDC_ISSUER="${OIDC_ISSUER:-<missing — cluster not found>}"
 AWS_DATAPLANE_ROLE_ARN="${ROLE_ARN:-<missing — role not found>}"
 S3_BUCKET_NAME="$BUCKET"
 AWS_SUPPORT_ROLE_ARN="${SUPPORT_ROLE_ARN:-<missing — role not found>}"
-AWS_SUPPORT_EXTERNAL_ID="$SUPPORT_EXTERNAL_ID"
+AWS_SUPPORT_EXTERNAL_ID="$onboarding_ext_id"
 
 # Optional — fill in if your Savant contact asked for them
 #CUSTOMER_NAME=""

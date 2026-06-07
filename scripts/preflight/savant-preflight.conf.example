@@ -24,14 +24,20 @@ BUCKET=my-savant-dataplane
 #   system:serviceaccount:<NAMESPACE>:savant-agent
 NAMESPACE=savant
 
+# ----- optional -------------------------------------------------------------
+
 # External ID condition value you generated for the Savant support role
 # (e.g. from `openssl rand -hex 20`). This is the same value you put in
 # the support role's trust policy, and the value Savant needs to assume
 # the role. The validator echoes it back in the onboarding block so it
 # ships to Savant alongside the other onboarding identifiers.
-SUPPORT_EXTERNAL_ID=REPLACE_WITH_THE_VALUE_YOU_GENERATED
-
-# ----- optional -------------------------------------------------------------
+#
+# Leave this unset if you have not generated it yet: the support-role checks
+# still run, and a trust policy missing the sts:ExternalId condition is
+# reported as a failure. If the role already carries an External ID, the
+# validator prints it so you can set it here before sending the onboarding
+# block to Savant.
+#SUPPORT_EXTERNAL_ID=REPLACE_WITH_THE_VALUE_YOU_GENERATED
 
 # Name of the IAM role Savant pods assume via IRSA.
 # Leave unset to use the default (savant-dataplane).
