@@ -708,6 +708,30 @@ if [[ $CLUSTER_OK -eq 1 ]]; then
             warn "nodegroup $ng has instance types outside m-series $expected_size baseline: $mismatched" \
                  "expected m6i/m6a/m7i/m7a (or similar m-series) at $expected_size; smaller or off-family sizes may under-provision this pool"
           fi
+
+          # Scaling floor/ceiling. Baselines mirror the node-group table above; a
+          # min of 0 is the classic "pool never scales, pods stay Pending" trap,
+          # since the autoscaler then has no labeled node to template from.
+          baseline_min=0
+          case "$pool_label" in
+            service) baseline_min=4 ;;
+            runtime) baseline_min=3 ;;
+            spark)   baseline_min=4 ;;
+          esac
+          if [[ ! "$min" =~ ^[0-9]+$ || ! "$max" =~ ^[0-9]+$ ]]; then
+            warn "nodegroup $ng ($pool_label) scaling config unreadable" "min=$min max=$max"
+          elif [[ "$max" -eq 0 || "$max" -lt "$min" ]]; then
+            fail "nodegroup $ng ($pool_label) scaling is invalid (min=$min, max=$max)" \
+                 "max must be > 0 and >= min, or the pool cannot scale"
+          elif [[ "$min" -eq 0 ]]; then
+            fail "nodegroup $ng ($pool_label) has min size 0" \
+                 "set min >= $baseline_min so a labeled node is always present; a 0 floor leaves this pool's pods Pending"
+          elif [[ "$min" -lt "$baseline_min" ]]; then
+            warn "nodegroup $ng ($pool_label) min size $min is below the baseline of $baseline_min" \
+                 "may under-provision this pool under load"
+          else
+            pass "nodegroup $ng ($pool_label) scaling min=$min/max=$max meets the baseline"
+          fi
           ;;
         *)
           # Extra pools (e.g. 'infra') are fine — Savant does not require a
