@@ -232,6 +232,33 @@ warn_high_restarts() {
   fi
 }
 
+# Translate a FailedScheduling event message into an operator-actionable hint.
+# Falls back to the raw message so unknown causes still surface verbatim.
+classify_sched_failure() {
+  local msg=$1
+  case "$msg" in
+    *"node affinity/selector"*|*"didn't match node selector"*|*"didn't match Pod's node affinity"*)
+      echo "no node matches the pod's nodeSelector — the target pool has no node; check that pool's autoscaler discovery tags and min size" ;;
+    *"Insufficient"*)
+      echo "nodes are full and the pool isn't growing — pool likely at max size or hitting an instance/quota ceiling" ;;
+    *"untolerated taint"*)
+      echo "node taints don't match the pod's tolerations" ;;
+    *"volume node affinity conflict"*)
+      echo "a bound volume pins the pod to a zone with no schedulable pool node" ;;
+    "")
+      echo "no FailedScheduling event yet — pod may be newly created, or blocked for a non-scheduling reason" ;;
+    *)
+      echo "$msg" ;;
+  esac
+}
+
+# Latest FailedScheduling message for a pod (namespaced events), or empty.
+latest_sched_failure() {
+  local pod=$1
+  k get events --field-selector "involvedObject.name=$pod,reason=FailedScheduling" -o json \
+    | jq -r '[.items[]] | sort_by(.lastTimestamp // .eventTime // "") | last | .message // ""' 2>/dev/null
+}
+
 # Pull the values the chart was rendered with. Returns JSON on stdout, or
 # an empty string if helm is unavailable / release missing.
 RELEASE_VALUES_JSON=""
@@ -683,6 +710,95 @@ if [[ $AGENT_A_OK -eq 1 ]]; then
   fi
 else
   skip "agent live probe" "structural readiness failed"
+fi
+
+# ---- 2.8 Cluster capacity & autoscaling -----------------------------------
+section "2.8 Cluster capacity & autoscaling"
+
+# The dataplane's runtime/spark pools scale on demand; their pods sit Pending
+# forever without a working autoscaler and a labeled node pool to land on.
+# This section is cluster-scoped (nodes + kube-system) — it reads through the
+# operator's kubeconfig, not the namespaced agent path.
+
+# (a) An autoscaler must be present AND up. We positively detect either the
+#     Cluster Autoscaler or Karpenter (both supported per the AWS setup guide)
+#     and PASS only when its deployment actually has ready replicas — a green
+#     line here means "the autoscaler process is live", and nothing weaker.
+#     (It confirms the controller is running, not that every IAM/tag is correct;
+#     the end-to-end "can it really add a node" proof is a separate active probe.)
+if ! kubectl auth can-i get deploy --all-namespaces >/dev/null 2>&1; then
+  warn "autoscaler liveness not verified" \
+       "this context can't list deployments cluster-wide — confirm manually that Cluster Autoscaler or Karpenter is running"
+else
+  as_json=$(kubectl get deploy --all-namespaces -o json 2>/dev/null | jq '
+    [ .items[]
+      | (((.metadata.name | test("karpenter"))
+          or (.metadata.labels["app.kubernetes.io/name"] == "karpenter")) as $is_kp
+         | select(
+             $is_kp
+             or (.metadata.name | test("cluster-autoscaler"))
+             or (.metadata.labels["app.kubernetes.io/name"] == "aws-cluster-autoscaler")
+             or (.metadata.labels["app"] == "cluster-autoscaler"))
+         | { name: .metadata.name, ns: .metadata.namespace,
+             kind: (if $is_kp then "Karpenter" else "Cluster Autoscaler" end),
+             ready: (.status.readyReplicas // 0) }) ]')
+  as_count=$(echo "$as_json" | jq -r 'length' 2>/dev/null || echo 0)
+  if [[ "${as_count:-0}" -eq 0 ]]; then
+    warn "no recognized autoscaler found (Cluster Autoscaler or Karpenter)" \
+         "runtime/spark pools won't scale without one — verify your cluster's autoscaler manually"
+  else
+    live=$(echo "$as_json" | jq -r '[.[] | select(.ready >= 1) | "\(.kind) (\(.ns)/\(.name))"] | join(", ")')
+    if [[ -n "$live" ]]; then
+      pass "autoscaler deployment is live: $live"
+    else
+      down=$(echo "$as_json" | jq -r '[.[] | "\(.kind) (\(.ns)/\(.name)) ready=\(.ready)"] | join(", ")')
+      fail "autoscaler present but not ready" \
+           "$down — Pending pods will not trigger scale-up"
+    fi
+  fi
+fi
+
+# Pull namespace pods once for (b) and (c).
+ns_pods_json=$(k get pods -o json 2>/dev/null)
+
+# (b) Each pool must back its workloads with at least one node carrying its label.
+if ! kubectl auth can-i get nodes >/dev/null 2>&1; then
+  warn "node-pool presence not verified" \
+       "this context can't read cluster nodes — confirm manually: kubectl get nodes -L pool.savant.io/type"
+else
+  for p in service runtime spark; do
+    node_count=$(kubectl get nodes -l "pool.savant.io/type=$p" -o json 2>/dev/null \
+                 | jq -r '.items | length' 2>/dev/null)
+    node_count=${node_count:-0}
+    if [[ "$node_count" -ge 1 ]]; then
+      pass "pool '$p' has $node_count node(s)"
+    else
+      # 0 nodes is only a failure if something is actually waiting on this pool.
+      need=$(echo "$ns_pods_json" | jq -r --arg p "$p" '
+        [ .items[]
+          | select(.status.phase == "Pending")
+          | select(.spec.nodeSelector["pool.savant.io/type"] == $p) ] | length' 2>/dev/null)
+      if [[ "${need:-0}" -ge 1 ]]; then
+        fail "pool '$p' has 0 nodes and $need pod(s) Pending for it" \
+             "autoscaler isn't adding '$p' nodes — check the '$p' ASG's discovery tags and min size"
+      else
+        warn "pool '$p' has 0 nodes" \
+             "nothing Pending for it now, but it must be able to scale up on demand"
+      fi
+    fi
+  done
+fi
+
+# (c) Classify any Pending pod in the namespace by its scheduling failure.
+pending_names=$(echo "$ns_pods_json" \
+  | jq -r '.items[] | select(.status.phase == "Pending") | .metadata.name' 2>/dev/null)
+if [[ -z "$pending_names" ]]; then
+  pass "no Pending pods in $NAMESPACE"
+else
+  while IFS= read -r pod; do
+    [[ -z "$pod" ]] && continue
+    fail "$pod is Pending" "$(classify_sched_failure "$(latest_sched_failure "$pod")")"
+  done <<< "$pending_names"
 fi
 
 # ============================================================================
