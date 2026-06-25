@@ -99,6 +99,18 @@ zookeeper:
       enabled: false
     quorum:
       enabled: false
+  # Enable the Bitnami ZooKeeper Prometheus metrics endpoint (served in-process
+  # by the ZooKeeper container on port 9141).
+  metrics:
+    enabled: true
+  # Scrape opt-in for the in-chart Alloy forwarder. The exporter is a side-car
+  # in the ZooKeeper pod, so the annotations must live on the POD — Alloy
+  # discovers with role="pod". (Bitnami's own metrics.service.annotations land
+  # on the metrics Service, which pod-role discovery never sees.)
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9141"
+    prometheus.io/path: "/metrics"
 
 # Spark Operator (Kubeflow subchart) — reconciles SparkApplication CRs submitted
 # by the Savant runtime. `spark.jobNamespaces: [""]` means the operator watches
@@ -149,6 +161,13 @@ spark:
     repository: savant-prod/gcr.io/bitnami-spark
     tag: v3.5.6_2.13
     pullPolicy: IfNotPresent
+  # Enable the Spark Prometheus metrics endpoint (served in-process via
+  # SPARK_METRICS_ENABLED) on master and worker pods. The subchart stamps its
+  # masterAnnotations/workerAnnotations (prometheus.io/scrape, path /metrics/,
+  # port = containerPorts.http) onto the pods when this is on, so the in-chart
+  # Alloy forwarder discovers them with no further wiring.
+  metrics:
+    enabled: true
   master:
     # HA master quorum. The vendored Bitnami chart adds support for this knob
     # (upstream hardcodes replicas: 1). See charts/spark/SAVANT_PATCHES.md.

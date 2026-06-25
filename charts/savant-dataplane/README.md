@@ -142,7 +142,16 @@ prometheus.io/port: "8080"
 prometheus.io/path: "/actuator/prometheus"
 ```
 
-The in-chart Alloy forwarder discovers pods this way, and if you run your own Prometheus in the same cluster you can scrape them the same way — no extra chart flag needed.
+The supporting workloads expose metrics through their own exporters and opt in the same way:
+
+| Workload | Port | Path | Enabled by |
+| --- | --- | --- | --- |
+| `agent`, `analytic-engine` | `8080` | `/actuator/prometheus` | always (Spring Boot Micrometer) |
+| `tei` | `80` | `/metrics` | always (Text Embeddings Inference) |
+| `spark` master & worker | `containerPorts.http` | `/metrics/` | `spark.metrics.enabled` |
+| `zookeeper` | `9141` | `/metrics` | `zookeeper.metrics.enabled` |
+
+The in-chart Alloy forwarder discovers pods this way, and if you run your own Prometheus in the same cluster you can scrape them the same way — no extra chart flag needed. To keep a workload out of the metrics stream, drop its `prometheus.io/scrape` annotation (or set the exporter's `*.metrics.enabled` to `false`).
 
 ## Upgrade
 
