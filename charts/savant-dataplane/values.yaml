@@ -415,6 +415,20 @@ alloy:
       cpu: 500m
       memory: 512Mi
 
+# Warm pool — pre-provisions node capacity so elastic workloads start faster.
+# Currently this block only defines the PriorityClass; the pause-pod workload
+# that consumes it via `priorityClassName` is provisioned separately.
+warmPool:
+  priorityClass:
+    # PriorityClass is cluster-scoped. Assumes one dataplane release per
+    # cluster — if multiple releases share a cluster, only one should create
+    # this (otherwise the second install conflicts on the shared object).
+    create: true
+    name: warmup-pods
+    # Negative priority: warm-pool pause pods are always preempted by real
+    # workloads when the node is under resource pressure.
+    value: -10
+
 # Internal knobs — not part of the customer-facing values API. Subject to
 # change without notice between chart versions.
 _internal:
