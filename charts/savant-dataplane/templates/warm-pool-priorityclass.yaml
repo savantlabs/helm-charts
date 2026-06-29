@@ -1,0 +1,21 @@
+{{- if .Values.warmPool.priorityClass.create }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.warmPool.priorityClass.name }}
+  labels:
+    {{- include "savant-dataplane.labels" . | nindent 4 }}
+  annotations:
+    # PriorityClass is cluster-scoped (unlike everything else this chart
+    # renders). Keep it across `helm uninstall` so any in-flight pods that
+    # reference it aren't left pointing at a missing PriorityClass.
+    helm.sh/resource-policy: keep
+# Negative value: warm-pool pause pods are always preempted by real
+# workloads when the node is under resource pressure.
+value: {{ .Values.warmPool.priorityClass.value }}
+globalDefault: false
+preemptionPolicy: Never
+description: >-
+  Low-priority pause pods for warm pool pre-warming. Evicted by real
+  workloads when node resources are exhausted.
+{{- end }}

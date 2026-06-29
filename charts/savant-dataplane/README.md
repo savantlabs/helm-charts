@@ -16,6 +16,7 @@ Helm chart that installs the Savant dataplane into a customer-managed Kubernetes
 | `savant-secrets` | Secret | Optional, holds the customer-generated STS External ID |
 | `gcp-credential-config` | ConfigMap | Savant control-plane WIF credential-config (non-sensitive) |
 | `savant-agent` | ServiceAccount + RoleBinding | Namespace-admin identity used by the agent and its workloads |
+| `warmup-pods` | PriorityClass | Low (negative) priority for warm-pool pre-warming pods, so they yield to real workloads under resource pressure |
 
 ## Prerequisites
 
