@@ -139,16 +139,20 @@ spec:
             # gcp-credential-config ConfigMap + a projected SA token.
             - name: RUNTIME_SPARKAPP_WIFAUDIENCE
               value: {{ include "savant-dataplane.wifAudience" . | quote }}
-            - name: RUNTIME_VPC_CLOUD_PROVIDER
+            - name: RUNTIME_VPC_CLOUDPROVIDER
               value: {{ .Values.savantConfig.cloudProvider | quote }}
             # Spring relaxed-binding: maps to `agent.cloudProvider`, which
             # DataStorageAutoConfig reads to pick S3 vs GCS.
             # TODO: remove once every deployed runtime version has the
             # vpc-qa/vpc-prod profile change that chains agent.cloudProvider
             # to runtime.vpc.cloud-provider (savant-runtime-jvm); at that
-            # point RUNTIME_VPC_CLOUD_PROVIDER alone is sufficient.
+            # point RUNTIME_VPC_CLOUDPROVIDER alone is sufficient.
             - name: AGENT_CLOUDPROVIDER
               value: {{ .Values.savantConfig.cloudProvider | quote }}
+            # Engine tier (small | medium | large): per-engine Spark power.
+            # Overrides runtime.vpc.tier in the runtime config.
+            - name: RUNTIME_VPC_TIER
+              value: {{ .Values.analyticEngine.tier | quote }}
             - name: RUNTIME_VPC_STAGING_PREFIX
               value: "/tmp"
             - name: SAVANT_K8S_POD

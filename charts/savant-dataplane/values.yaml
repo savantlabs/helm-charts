@@ -366,6 +366,15 @@ analyticEngine:
     tag: v1.0.0
     pullPolicy: Always
   replicaCount: 1
+  # Floor: minimum number of analytic engines kept always-on (the "warm floor"
+  # from the Capacity Planning guide; range 1-8). Rendered onto the agent
+  # deployment as SAVANT_VPC_ANALYTICENGINE_MIN, which overrides
+  # savant.vpc.analytic-engine.min in the agent's application.yaml.
+  floor: 1
+  # Tier: per-engine Spark power (small | medium | large) — see the Capacity
+  # Planning guide. Rendered onto the analytic-engine statefulset as
+  # RUNTIME_VPC_TIER, which overrides runtime.vpc.tier in the runtime config.
+  tier: small
   # Spring profile passed via SPRING_PROFILES_ACTIVE. The `vpc-*` suffix tells
   # the runtime it's executing inside a customer VPC dataplane. QA/dev stacks
   # override to `qa,vpc-qa`.
