@@ -126,6 +126,10 @@ spec:
               value: {{ .Values.agent.springProfiles | quote }}
             - name: SAVANT_AGENT_STAGING_PREFIX
               value: "/tmp"
+            # Analytic-engine floor (always-on minimum). Overrides
+            # savant.vpc.analytic-engine.min in the agent's application.yaml.
+            - name: SAVANT_VPC_ANALYTICENGINE_MIN
+              value: {{ .Values.analyticEngine.floor | quote }}
             - name: SAVANT_K8S_ISINK8S
               value: "true"
             - name: SAVANT_K8S_POD
@@ -142,6 +146,13 @@ spec:
                   name: savant-config
                   key: SAVANT_AGENT_ID
             - name: SAVANT_AGENT_CLOUD_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: savant-config
+                  key: SAVANT_AGENT_CLOUD_PROVIDER
+            # Canonical relaxed-binding env for agent.agent.cloudProvider, so the
+            # property can move off the ${SAVANT_AGENT_CLOUD_PROVIDER} placeholder.
+            - name: AGENT_AGENT_CLOUDPROVIDER
               valueFrom:
                 configMapKeyRef:
                   name: savant-config

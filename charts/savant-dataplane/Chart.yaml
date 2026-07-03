@@ -2,7 +2,7 @@ apiVersion: v2
 name: savant-dataplane
 description: Savant dataplane for self-managed Kubernetes deployments
 type: application
-version: 0.15.0
+version: 0.15.1
 appVersion: "1.0.0"
 home: https://savantlabs.io
 icon: https://assets.savantlabs.io/brand/icon.svg
