@@ -233,9 +233,14 @@ spark:
       - name: SPARK_DEAD_WORKER_PERSISTENCE
         value: "120"
   worker:
-    # Static replica count. HPA is not a good fit for Spark workers (CPU/memory
-    # metrics don't reflect queue depth). Capacity scales at the node level via
-    # the cluster autoscaler as pending executor pods trigger node additions.
+    # Seed replica count for a fresh install only. At runtime the Savant agent's
+    # pressure-based controller owns the worker pool size, scaling it in step
+    # with analytic-engine demand using execution queue depth as the signal.
+    # A Kubernetes HPA stays disabled on purpose: CPU/memory utilization does
+    # not reflect queue depth, and an external controller — not an HPA — drives
+    # the count. The worker StatefulSet omits `replicas` on upgrade (see
+    # statefulset-worker.yaml), so Helm does not fight the controller. Cluster
+    # autoscaling still provides node capacity underneath.
     replicaCount: 4
     resources:
       requests:
@@ -259,11 +264,39 @@ spark:
                     operator: In
                     values: ["worker"]
               topologyKey: topology.kubernetes.io/zone
-    # Workers are stateless and Spark retries failed stages; prefer cluster
-    # elasticity (Spot reclaim, autoscaler consolidation) over a tight PDB.
+    # Workers hold ephemeral cached data — Spark local-checkpoint blocks, not
+    # just shuffle output — so losing a worker can fail an in-flight analysis
+    # rather than merely trigger a stage retry. Scale-in therefore drains a
+    # worker before it stops (see lifecycleHooks below), migrating its cached
+    # blocks to surviving workers first. The PDB stays tolerant so involuntary
+    # disruptions (Spot reclaim, autoscaler consolidation) are not blocked; the
+    # graceful path covers routine controller-driven scale-in.
     pdb:
       create: true
       maxUnavailable: 50%
+    # Graceful scale-in for the controller-driven worker pool. Enable Spark
+    # worker decommissioning so a terminating worker hands its RDD and
+    # local-checkpoint blocks off to surviving workers instead of dropping them
+    # (a dropped local-checkpoint block is unrecoverable — its lineage was
+    # truncated when it was cached). The standalone worker gates its SIGPWR
+    # decommission handler on spark.decommission.enabled (the same key the
+    # driver uses), not on a worker-scoped variant.
+    configOptions: "-Dspark.decommission.enabled=true"
+    # preStop signals the Spark worker process (SIGPWR = decommission) and then
+    # waits, so in-flight block migration can finish before the container gets
+    # SIGTERM. The worker JVM is not PID 1 (a launcher script is), so it is
+    # targeted by command line rather than by PID. Keep
+    # terminationGracePeriodSeconds comfortably above the preStop wait so
+    # Kubernetes does not SIGKILL before migration completes. Both values are
+    # initial estimates — tune against observed migration time.
+    terminationGracePeriodSeconds: 150
+    lifecycleHooks:
+      preStop:
+        exec:
+          command:
+            - /bin/sh
+            - -c
+            - 'pkill --signal PWR -f "deploy.worker.Worker --webui-port" || true; sleep 120'
     # Our vendored Bitnami fork gates its default single-master SPARK_MASTER_URL
     # behind this flag so we can set the full 3-master quorum URL below without
     # producing duplicate env keys. See charts/spark/SAVANT_PATCHES.md.
