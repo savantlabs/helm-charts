@@ -53,7 +53,7 @@ The customer-facing `values.yaml` is a versioned contract. Breaking changes land
 
 Customers running in restricted networks typically mirror chart images into a private registry. The chart supports this through standard Helm image overrides:
 
-- `<component>.image.repository` on each Savant component (`agent`, `analyticEngine`, `tei`)
+- `<component>.image.repository` on each Savant component (`agent`, `analyticEngine`, `tei`, `genai`)
 - `global.imageRegistry` for the Bitnami-style subcharts (ZooKeeper, Spark)
 - Subchart image overrides for Spark Operator per its [upstream values](https://github.com/kubeflow/spark-operator/tree/master/charts/spark-operator-chart)
 

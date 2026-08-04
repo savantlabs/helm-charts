@@ -47,6 +47,10 @@ agent:
 analyticEngine:
   enabled: false
 
+# GenAI pulls a Savant image and needs live WIF credentials; disable in kind.
+genai:
+  enabled: false
+
 # Dummy values to satisfy values.schema.json (agentId, aws fields, and one of
 # the controlPlane credential-config options are required).
 savantConfig:
