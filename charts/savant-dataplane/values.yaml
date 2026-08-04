@@ -426,14 +426,11 @@ analyticEngine:
   service:
     port: 8080
 
-# Savant GenAI — the service behind Savant's AI features. Disabled by default:
-# it needs model-provider access that a dataplane does not have out of the box,
-# so enable it only when your Savant account team has set that up with you.
-#
-# When enabled it embeds against the in-cluster TEI service rather than any
-# external embedding API, so document text stays inside your VPC.
+# Savant GenAI — the service behind Savant's AI features. It embeds against the
+# in-cluster TEI service rather than any external embedding API, so document text
+# stays inside your VPC.
 genai:
-  enabled: false
+  enabled: true
   image:
     repository: us-docker.pkg.dev/savant-prod/gcr.io/genai
     tag: v1.0.0

@@ -9,7 +9,7 @@ Helm chart that installs the Savant dataplane into a customer-managed Kubernetes
 | `agent` | Deployment | Orchestrator that talks to Savant's control plane |
 | `analytic-engine` | StatefulSet | Spark driver that submits jobs to the standalone cluster |
 | `tei` | Deployment | Text embeddings inference server for Savant's GenAI features |
-| `genai` | Deployment | Savant's AI service. Disabled by default — see [GenAI](#genai) |
+| `genai` | Deployment | Savant's AI service — see [GenAI](#genai) |
 | `spark` (master + workers) | StatefulSets | Standalone Spark cluster for analytic workloads |
 | `zookeeper` | StatefulSet | HA coordination for the Spark cluster |
 | `spark-operator` | Deployment | Reconciles SparkApplication CRs submitted by the runtime |
@@ -117,13 +117,11 @@ Each exposes the same shape. Override `image.tag` only if Savant support has dir
 
 ### GenAI
 
-`genai` is the service behind Savant's AI features. It ships **disabled** (`genai.enabled: false`) because it needs model-provider access that a dataplane does not have out of the box. Turn it on only after your Savant account team has arranged that with you.
-
-When enabled, it embeds text against the in-cluster `tei` service rather than any external embedding API, so document content stays inside your VPC, and it stores conversations in the same S3 bucket the agent uses, via the same IRSA credentials.
+`genai` is the service behind Savant's AI features. It embeds text against the in-cluster `tei` service rather than any external embedding API, so document content stays inside your VPC, and it stores conversations in the same S3 bucket the agent uses, via the same IRSA credentials.
 
 | Key | Default | Description |
 |---|---|---|
-| `genai.enabled` | `false` | Deploy the GenAI service. |
+| `genai.enabled` | `true` | Deploy the GenAI service. |
 | `genai.springProfiles` | `prod,vpc-prod` | Selects the dataplane configuration. Do not change unless directed. |
 | `genai.datafabric.enabled` | `false` | Pub/Sub transport back to Savant's control plane. Off unless Savant support asks you to enable it. |
 | `genai.service.port` | `8080` | Cluster-internal port for the service. |
