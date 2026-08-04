@@ -47,6 +47,11 @@ agent:
 analyticEngine:
   enabled: false
 
+# GenAI is disabled by default anyway; state it so a future default flip doesn't
+# silently pull a Savant image into kind.
+genai:
+  enabled: false
+
 # Dummy values to satisfy values.schema.json (agentId, aws fields, and one of
 # the controlPlane credential-config options are required).
 savantConfig:

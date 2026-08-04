@@ -107,6 +107,21 @@
     },
     "agent":           { "$ref": "#/$defs/component" },
     "analyticEngine":  { "$ref": "#/$defs/component" },
+    "genai": {
+      "allOf": [
+        { "$ref": "#/$defs/component" },
+        {
+          "properties": {
+            "datafabric": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    },
     "tei": {
       "allOf": [
         { "$ref": "#/$defs/component" },
@@ -162,6 +177,13 @@
           "additionalProperties": false
         },
         "analyticEngine": {
+          "type": "object",
+          "properties": {
+            "forceReplicas": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "genai": {
           "type": "object",
           "properties": {
             "forceReplicas": { "type": "boolean" }

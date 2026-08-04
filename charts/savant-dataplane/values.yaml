@@ -426,6 +426,39 @@ analyticEngine:
   service:
     port: 8080
 
+# Savant GenAI — the service behind Savant's AI features. Disabled by default:
+# it needs model-provider access that a dataplane does not have out of the box,
+# so enable it only when your Savant account team has set that up with you.
+#
+# When enabled it embeds against the in-cluster TEI service rather than any
+# external embedding API, so document text stays inside your VPC.
+genai:
+  enabled: false
+  image:
+    repository: us-docker.pkg.dev/savant-prod/gcr.io/genai
+    tag: v1.0.0
+    pullPolicy: Always
+  replicaCount: 1
+  # Spring profile passed via SPRING_PROFILES_ACTIVE. The `vpc-*` suffix selects
+  # the dataplane settings (in-cluster embeddings, no external model providers).
+  # QA/dev stacks override to `qa,vpc-qa`.
+  springProfiles: "prod,vpc-prod"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  nodeSelector:
+    pool.savant.io/type: service
+  datafabric:
+    # Pub/Sub transport back to Savant's control plane. Off by default — nothing
+    # routes to this service from outside the cluster yet.
+    enabled: false
+  service:
+    port: 8080
+
 # Grafana Alloy (metrics forwarder subchart). Only deployed when
 # savantConfig.telemetry.remoteWrite.enabled is true. We render our own
 # ConfigMap (see templates/metrics-forwarder-config.yaml) and our own
@@ -482,4 +515,6 @@ _internal:
   agent:
     forceReplicas: false
   analyticEngine:
+    forceReplicas: false
+  genai:
     forceReplicas: false

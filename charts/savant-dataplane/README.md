@@ -9,6 +9,7 @@ Helm chart that installs the Savant dataplane into a customer-managed Kubernetes
 | `agent` | Deployment | Orchestrator that talks to Savant's control plane |
 | `analytic-engine` | StatefulSet | Spark driver that submits jobs to the standalone cluster |
 | `tei` | Deployment | Text embeddings inference server for Savant's GenAI features |
+| `genai` | Deployment | Savant's AI service. Disabled by default — see [GenAI](#genai) |
 | `spark` (master + workers) | StatefulSets | Standalone Spark cluster for analytic workloads |
 | `zookeeper` | StatefulSet | HA coordination for the Spark cluster |
 | `spark-operator` | Deployment | Reconciles SparkApplication CRs submitted by the runtime |
@@ -94,7 +95,7 @@ Only values you are expected to set or override are listed. Subchart values (Zoo
 | `telemetry.remoteWrite.enabled` | `true` | Deploys a [Grafana Alloy](https://grafana.com/docs/alloy/) pod that scrapes Savant Spring Boot pods and forwards the samples to Savant's hosted receiver so support can diagnose issues without remote shell access. Set to `false` to keep all telemetry inside your VPC — the dataplane functions identically, only Savant-side support visibility changes. |
 | `telemetry.remoteWrite.endpoint` | `https://metrics.savantlabs.io/api/v1/push` | Prometheus remote_write receiver. The default is the Savant hosted receiver; Savant's `savant-onboarding.yaml` can override it for you. |
 
-### `agent`, `analyticEngine`, `tei`
+### `agent`, `analyticEngine`, `tei`, `genai`
 
 Each exposes the same shape. Override `image.tag` only if Savant support has directed you to a specific version; otherwise accept the chart defaults.
 
@@ -113,6 +114,28 @@ Each exposes the same shape. Override `image.tag` only if Savant support has dir
 | `tei.persistence.enabled` | `true` | Mount a PVC for the HuggingFace model cache so pod restarts don't re-download. |
 | `tei.persistence.size` | `10Gi` | PVC size. |
 | `tei.persistence.storageClass` | *(unset)* | Uses the cluster's default StorageClass. Override here or use `global.storageClass` to drive all subcharts at once. |
+
+### GenAI
+
+`genai` is the service behind Savant's AI features. It ships **disabled** (`genai.enabled: false`) because it needs model-provider access that a dataplane does not have out of the box. Turn it on only after your Savant account team has arranged that with you.
+
+When enabled, it embeds text against the in-cluster `tei` service rather than any external embedding API, so document content stays inside your VPC, and it stores conversations in the same S3 bucket the agent uses, via the same IRSA credentials.
+
+| Key | Default | Description |
+|---|---|---|
+| `genai.enabled` | `false` | Deploy the GenAI service. |
+| `genai.springProfiles` | `prod,vpc-prod` | Selects the dataplane configuration. Do not change unless directed. |
+| `genai.datafabric.enabled` | `false` | Pub/Sub transport back to Savant's control plane. Off unless Savant support asks you to enable it. |
+| `genai.service.port` | `8080` | Cluster-internal port for the service. |
+
+The pod takes roughly three minutes to become ready on a cold start; its `startupProbe` allows for that. Two optional objects let you adjust its configuration without a chart upgrade — create either in the release namespace and restart the deployment:
+
+| Object | Kind | Purpose |
+|---|---|---|
+| `genai-env` | ConfigMap | Extra environment variables |
+| `genai-secrets` | Secret | Extra environment variables holding credentials |
+
+Neither is managed by this chart, so `helm upgrade` leaves them untouched. Both can *add* variables; they cannot override the ones the chart sets, since a container's own `env` wins on key conflicts.
 
 ### Agent scratch storage
 
@@ -135,7 +158,7 @@ All top-level keys below are passed directly to the upstream subchart. Do not ch
 
 #### Prometheus scrape annotations
 
-Savant's Spring Boot pods (`agent`, `analytic-engine`) carry the standard Prometheus opt-in annotations:
+Savant's Spring Boot pods (`agent`, `analytic-engine`, `genai`) carry the standard Prometheus opt-in annotations:
 
 ```yaml
 prometheus.io/scrape: "true"
@@ -148,6 +171,7 @@ The supporting workloads expose metrics through their own exporters and opt in t
 | Workload | Port | Path | Enabled by |
 | --- | --- | --- | --- |
 | `agent`, `analytic-engine` | `8080` | `/actuator/prometheus` | always (Spring Boot Micrometer) |
+| `genai` | `8080` | `/genai/actuator/prometheus` | when `genai.enabled` (served under the `/genai` context path) |
 | `tei` | `80` | `/metrics` | always (Text Embeddings Inference) |
 | `spark` master & worker | `containerPorts.http` | `/metrics/` | `spark.metrics.enabled` |
 | `zookeeper` | `9141` | `/metrics` | `zookeeper.metrics.enabled` |
@@ -196,6 +220,9 @@ Check `kubectl describe pod spark-master-0`. Common causes: service pool is full
 
 **TEI pod stuck `Pending` with "Insufficient memory".**
 TEI requests `12Gi` on the `runtime` pool. The runtime node group must have room; either add a node or shrink `tei.resources.requests.memory` to match your available capacity.
+
+**`genai` pod restarts before it ever becomes ready.**
+Cold start takes about three minutes, and the `startupProbe` is sized for that. If it is still being killed, the pod is likely blocked reaching a dependency — check `kubectl logs deploy/genai` for repeated connection timeouts, and confirm the in-cluster `tei` service is running, since GenAI embeds against it.
 
 **Agent rolling-restart of analytic-engine fails.**
 The agent expects the analytic-engine StatefulSet to be named exactly `analytic-engine`. The chart hardcodes that name; if you are overriding it, don't.
