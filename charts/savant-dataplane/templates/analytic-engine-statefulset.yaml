@@ -39,6 +39,11 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/actuator/prometheus"
     spec:
+      # The runtime runs as uid/gid 1001 (app). fsGroup makes the shared-data
+      # emptyDir and the projected WIF token mount group-readable by 1001.
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
       serviceAccountName: savant-agent
       {{- with .Values.analyticEngine.nodeSelector }}
       nodeSelector:
