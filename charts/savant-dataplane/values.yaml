@@ -60,15 +60,18 @@ zookeeper:
   # Fixed resource name (no release-name prefix), so consumers can reference
   # ZooKeeper by the deterministic DNS name `zookeeper.<namespace>`.
   fullnameOverride: zookeeper
-  # Bitnami moved free community images to `bitnamilegacy/*` in Aug 2025; the
-  # `bitnami/*` namespace now requires a paid subscription. These two settings
-  # keep the chart on the free legacy image.
+  # Our own build of the Bitnami ZooKeeper image (DO-228), not `bitnamilegacy/*`.
+  # Broadcom froze the free Bitnami catalog in Aug 2025, so we build and
+  # CVE-patch it ourselves, keeping the chart's image contract. The public repo is
+  # anonymously pullable, which customer clusters need. Subchart 13.8.7 refuses any
+  # image outside its own Bitnami list, so allowInsecureImages must stay true.
   global:
     security:
       allowInsecureImages: true
   image:
-    repository: bitnamilegacy/zookeeper
-    tag: 3.9.3
+    registry: us-docker.pkg.dev
+    repository: savant-prod/gcr.io/bitnami-compat/zookeeper
+    tag: 3.9.3-r2
   replicaCount: 3
   persistence:
     enabled: true
