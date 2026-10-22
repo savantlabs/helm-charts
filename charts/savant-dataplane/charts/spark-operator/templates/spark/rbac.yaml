@@ -15,7 +15,7 @@ limitations under the License.
 */}}
 
 {{- if .Values.spark.rbac.create -}}
-{{- range $jobNamespace := .Values.spark.jobNamespaces | default list }}
+{{- range $jobNamespace := (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) | default list }}
 {{- if ne $jobNamespace "" }}
 
 ---

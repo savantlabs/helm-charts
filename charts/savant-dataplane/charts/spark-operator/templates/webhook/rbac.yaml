@@ -54,7 +54,7 @@ rules:
   verbs:
   - get
   - update
-{{- if not .Values.spark.jobNamespaces | or (has "" .Values.spark.jobNamespaces) }}
+{{- if not (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) | or (has "" (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray)) }}
 {{ include "spark-operator.webhook.policyRules" . }}
 {{- end }}
 ---
@@ -124,7 +124,7 @@ rules:
   - get
   - update
 {{- end }}
-{{- if has .Release.Namespace .Values.spark.jobNamespaces }}
+{{- if has .Release.Namespace (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
 {{ include "spark-operator.webhook.policyRules" . }}
 {{- end }}
 
@@ -149,8 +149,8 @@ roleRef:
   kind: Role
   name: {{ include "spark-operator.webhook.roleName" . }}
 
-{{- if and .Values.spark.jobNamespaces (not (has "" .Values.spark.jobNamespaces)) }}
-{{- range $jobNamespace := .Values.spark.jobNamespaces }}
+{{- if and (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) (not (has "" (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray))) }}
+{{- range $jobNamespace := (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
 {{- if ne $jobNamespace $.Release.Namespace }}
 ---
 

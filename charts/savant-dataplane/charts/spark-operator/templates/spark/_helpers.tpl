@@ -45,3 +45,17 @@ Create the name of the role binding to be used by spark service account
 {{- define "spark-operator.spark.roleBindingName" -}}
 {{- include "spark-operator.spark.serviceAccountName" . }}
 {{- end -}}
+
+{{/*
+Savant patch: namespaces the operator watches, as a JSON array (consume with
+`fromJsonArray`). An empty or unset `spark.jobNamespaces` resolves to the
+release namespace instead of upstream's watch-all, so a plain `helm install`
+gets namespaced RBAC. `[""]` still means all namespaces.
+*/}}
+{{- define "spark-operator.spark.jobNamespaces" -}}
+{{- $namespaces := .Values.spark.jobNamespaces | default list -}}
+{{- if not $namespaces -}}
+{{- $namespaces = list .Release.Namespace -}}
+{{- end -}}
+{{- toJson $namespaces -}}
+{{- end -}}

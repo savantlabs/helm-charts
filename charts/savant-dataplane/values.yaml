@@ -116,8 +116,9 @@ zookeeper:
     prometheus.io/path: "/metrics"
 
 # Spark Operator (Kubeflow subchart) — reconciles SparkApplication CRs submitted
-# by the Savant runtime. `spark.jobNamespaces: [""]` means the operator watches
-# all namespaces; scope it to specific namespaces if your org requires.
+# by the Savant runtime. Empty `spark.jobNamespaces` scopes the operator to the
+# release namespace (namespaced Role/RoleBinding). Set `[""]` to watch all
+# namespaces, which grants the operator cluster-wide RBAC.
 spark-operator:
   enabled: true
   controller:
@@ -138,8 +139,7 @@ spark-operator:
     nodeSelector:
       pool.savant.io/type: service
   spark:
-    jobNamespaces:
-      - ""
+    jobNamespaces: []
 
 # Spark standalone cluster (Bitnami subchart) — HA master (3 replicas via
 # post-install hook) with ZooKeeper recovery, autoscaling workers.

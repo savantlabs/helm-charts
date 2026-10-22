@@ -2,7 +2,7 @@ apiVersion: v2
 name: savant-dataplane
 description: Savant dataplane for self-managed Kubernetes deployments
 type: application
-version: 1.0.1
+version: 1.0.2
 appVersion: "1.0.0"
 home: https://savantlabs.io
 icon: https://assets.savantlabs.io/brand/icon.svg
@@ -17,9 +17,9 @@ dependencies:
     version: 13.8.7
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: zookeeper.enabled
+  # Vendored fork of kubeflow/spark-operator (see charts/spark-operator/SAVANT_PATCHES.md).
   - name: spark-operator
     version: 2.5.0
-    repository: https://kubeflow.github.io/spark-operator
     condition: spark-operator.enabled
   # Vendored fork of bitnami/spark (see charts/spark/SAVANT_PATCHES.md).
   # No `repository:` field — Helm resolves it from charts/spark/ in-tree.

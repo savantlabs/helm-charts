@@ -44,9 +44,9 @@ rules:
   - list
   - watch
 {{- end }}
-{{- if or (not .Values.spark.jobNamespaces) (has "" .Values.spark.jobNamespaces) .Values.spark.jobNamespaceSelector }}
+{{- if or (not (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray)) (has "" (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray)) .Values.spark.jobNamespaceSelector }}
 # Include cluster-wide permissions when:
-# 1. jobNamespaces is not set (watch all)
+# 1. jobNamespaces is not set (Savant patch: resolves to the release namespace, never watch-all)
 # 2. jobNamespaces contains "" (watch all)
 # 3. jobNamespaceSelector is set (dynamic discovery)
 {{ include "spark-operator.controller.policyRules" . }}
@@ -109,7 +109,7 @@ rules:
   - get
   - update
 {{- end }}
-{{- if has .Release.Namespace .Values.spark.jobNamespaces }}
+{{- if has .Release.Namespace (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
 {{ include "spark-operator.controller.policyRules" . }}
 {{- else }}
 - apiGroups:
@@ -143,8 +143,8 @@ roleRef:
   kind: Role
   name: {{ include "spark-operator.controller.roleName" . }}
 
-{{- if and .Values.spark.jobNamespaces (not (has "" .Values.spark.jobNamespaces)) }}
-{{- range $jobNamespace := .Values.spark.jobNamespaces }}
+{{- if and (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) (not (has "" (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray))) }}
+{{- range $jobNamespace := (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
 {{- if ne $jobNamespace $.Release.Namespace }}
 ---
 

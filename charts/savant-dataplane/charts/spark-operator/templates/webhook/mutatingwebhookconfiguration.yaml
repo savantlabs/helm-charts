@@ -38,7 +38,7 @@ webhooks:
   {{- with .Values.webhook.failurePolicy }}
   failurePolicy: {{ . }}
   {{- end }}
-  {{- with .Values.spark.jobNamespaces }}
+  {{- with (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
   {{- if not (has "" .) }}
   namespaceSelector:
     matchExpressions:
@@ -73,7 +73,7 @@ webhooks:
   {{- with .Values.webhook.failurePolicy }}
   failurePolicy: {{ . }}
   {{- end }}
-  {{- with .Values.spark.jobNamespaces }}
+  {{- with (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
   {{- if not (has "" .) }}
   namespaceSelector:
     matchExpressions:
@@ -105,7 +105,7 @@ webhooks:
   {{- with .Values.webhook.failurePolicy }}
   failurePolicy: {{ . }}
   {{- end }}
-  {{- with .Values.spark.jobNamespaces }}
+  {{- with (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
   {{- if not (has "" .) }}
   namespaceSelector:
     matchExpressions:
@@ -137,7 +137,7 @@ webhooks:
   {{- with .Values.webhook.failurePolicy }}
   failurePolicy: {{ . }}
   {{- end }}
-  {{- with .Values.spark.jobNamespaces }}
+  {{- with (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
   {{- if not (has "" .) }}
   namespaceSelector:
     matchExpressions:

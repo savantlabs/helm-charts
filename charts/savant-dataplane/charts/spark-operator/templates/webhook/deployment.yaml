@@ -54,7 +54,7 @@ spec:
         {{- with .Values.webhook.logEncoder }}
         - --zap-encoder={{ . }}
         {{- end }}
-        {{- with .Values.spark.jobNamespaces }}
+        {{- with (include "spark-operator.spark.jobNamespaces" $ | fromJsonArray) }}
         {{- if has "" . }}
         - --namespaces=""
         {{- else }}

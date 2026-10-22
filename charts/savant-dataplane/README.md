@@ -151,7 +151,7 @@ All top-level keys below are passed directly to the upstream subchart. Do not ch
 
 - `zookeeper.*` — [Bitnami ZooKeeper](https://artifacthub.io/packages/helm/bitnami/zookeeper)
 - `spark.*` — Bitnami Spark (vendored fork under `charts/spark/`; see `charts/spark/SAVANT_PATCHES.md`)
-- `spark-operator.*` — [Kubeflow Spark Operator](https://artifacthub.io/packages/helm/spark-operator/spark-operator)
+- `spark-operator.*` — Kubeflow Spark Operator (vendored fork under `charts/spark-operator/`; see `charts/spark-operator/SAVANT_PATCHES.md`). By default the operator watches only the release namespace and gets a namespaced `Role` / `RoleBinding`. Set `spark-operator.spark.jobNamespaces` to `[""]` to watch all namespaces instead, which needs cluster-wide RBAC.
 - `alloy.*` — [Grafana Alloy](https://artifacthub.io/packages/helm/grafana/alloy). Only deployed when `savantConfig.telemetry.remoteWrite.enabled=true`. The chart renders its config (ConfigMap `savant-metrics-forwarder-config`) and a namespace-scoped `Role` / `RoleBinding` itself, so the subchart's own ConfigMap and ClusterRole are disabled in the values.
 
 #### Prometheus scrape annotations
