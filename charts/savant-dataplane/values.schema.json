@@ -107,21 +107,7 @@
     },
     "agent":           { "$ref": "#/$defs/component" },
     "analyticEngine":  { "$ref": "#/$defs/component" },
-    "genai": {
-      "allOf": [
-        { "$ref": "#/$defs/component" },
-        {
-          "properties": {
-            "datafabric": {
-              "type": "object",
-              "properties": {
-                "enabled": { "type": "boolean" }
-              }
-            }
-          }
-        }
-      ]
-    },
+    "genai":           { "$ref": "#/$defs/component" },
     "tei": {
       "allOf": [
         { "$ref": "#/$defs/component" },

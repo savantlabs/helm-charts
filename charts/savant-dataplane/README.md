@@ -123,7 +123,6 @@ Each exposes the same shape. Override `image.tag` only if Savant support has dir
 |---|---|---|
 | `genai.enabled` | `true` | Deploy the GenAI service. |
 | `genai.springProfiles` | `prod,vpc-prod` | Selects the dataplane configuration. Do not change unless directed. |
-| `genai.datafabric.enabled` | `false` | Pub/Sub transport back to Savant's control plane. Off unless Savant support asks you to enable it. |
 | `genai.service.port` | `8080` | Cluster-internal port for the service. |
 
 The pod takes roughly three minutes to become ready on a cold start; its `startupProbe` allows for that. Two optional objects let you adjust its configuration without a chart upgrade — create either in the release namespace and restart the deployment:

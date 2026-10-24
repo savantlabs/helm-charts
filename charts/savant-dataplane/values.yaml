@@ -452,10 +452,6 @@ genai:
       memory: 2Gi
   nodeSelector:
     pool.savant.io/type: service
-  datafabric:
-    # Pub/Sub transport back to Savant's control plane. Off by default — nothing
-    # routes to this service from outside the cluster yet.
-    enabled: false
   service:
     port: 8080
 
