@@ -118,11 +118,14 @@ spec:
             # In-namespace ZooKeeper, deployed by this chart.
             - name: SAVANT_ZOOKEEPER_CONNECTSTRING
               value: "zookeeper"
-            # DataFabric is the control plane's Pub/Sub transport. Nothing routes to
-            # this service from outside the cluster yet, so the subscription would
-            # sit idle.
-            - name: SAVANT_DATAFABRIC_ENABLED
-              value: {{ .Values.genai.datafabric.enabled | quote }}
+            # Tenant identity the control plane addresses this deployment by. The
+            # Pub/Sub transport itself is switched on by the vpc-prod Spring
+            # profile (genai.springProfiles), not by an environment override.
+            - name: SAVANT_AGENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: savant-config
+                  key: SAVANT_AGENT_ID
             {{- if eq .Values.savantConfig.cloudProvider "aws" }}
             # Conversation storage on the customer's own bucket, reached with the
             # ServiceAccount's IRSA credentials.
