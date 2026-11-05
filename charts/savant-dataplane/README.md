@@ -17,6 +17,7 @@ Helm chart that installs the Savant dataplane into a customer-managed Kubernetes
 | `savant-secrets` | Secret | Optional, holds the customer-generated STS External ID |
 | `gcp-credential-config` | ConfigMap | Savant control-plane WIF credential-config (non-sensitive) |
 | `savant-agent` | ServiceAccount + RoleBinding | Namespace-admin identity used by the agent and its workloads |
+| `sandbox` | ServiceAccount | Identity for GenAI sandbox pods: no token, no RBAC, no cloud credentials (when `genai.enabled`) |
 | `warmup-pods` | PriorityClass | Low (negative) priority for warm-pool pre-warming pods, so they yield to real workloads under resource pressure |
 
 ## Prerequisites
@@ -133,6 +134,8 @@ The pod takes roughly three minutes to become ready on a cold start; its `startu
 | `genai-secrets` | Secret | Extra environment variables holding credentials |
 
 Neither is managed by this chart, so `helm upgrade` leaves them untouched. Both can *add* variables; they cannot override the ones the chart sets, since a container's own `env` wins on key conflicts.
+
+GenAI runs analysis code in short-lived sandbox pods it creates in the release namespace. They run as the chart's `sandbox` ServiceAccount, which mounts no token, has no RBAC and carries no IAM role, so code in a sandbox cannot reach the Kubernetes API or your cloud credentials.
 
 ### Agent scratch storage
 
