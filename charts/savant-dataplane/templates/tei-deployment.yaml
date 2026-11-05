@@ -31,6 +31,9 @@ spec:
         prometheus.io/port: "80"
         prometheus.io/path: "/metrics"
     spec:
+      # Serves embeddings only; never calls the Kubernetes API or the cloud.
+      serviceAccountName: tei
+      automountServiceAccountToken: false
       {{- with .Values.tei.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
