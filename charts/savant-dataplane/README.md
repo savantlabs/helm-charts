@@ -18,6 +18,7 @@ Helm chart that installs the Savant dataplane into a customer-managed Kubernetes
 | `gcp-credential-config` | ConfigMap | Savant control-plane WIF credential-config (non-sensitive) |
 | `savant-agent` | ServiceAccount + RoleBinding | Namespace-admin identity used by the agent and its workloads |
 | `sandbox` | ServiceAccount | Identity for GenAI sandbox pods: no token, no RBAC, no cloud credentials (when `genai.enabled`) |
+| `tei`, `warm-pool` | ServiceAccount | Identities for the embeddings server and the agent's warm-pool placeholder pods: no token, no RBAC, no cloud credentials |
 | `warmup-pods` | PriorityClass | Low (negative) priority for warm-pool pre-warming pods, so they yield to real workloads under resource pressure |
 
 ## Prerequisites
